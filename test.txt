@@ -1,0 +1,40 @@
+My question when using ChatGPT: 
+"Give me scenarios of which deserialization and serialization is used in the context of these cases:
+Serializing and deserializing a File message
+Serializing and deserializing a Request message
+Serializing and deserializing a Status message
+Edge cases for both types of messages, such as empty filenames or files with no data.
+Malformed messages, such as messages that are too short or have incorrect tags, or don't conform to the Pack109 protocol. 
+Along with those decriptivie scenarios, help me come up with quick examples for each that I can incorporate into my test cases."
+
+What AI wrote:
+Test Case: File Serialization
+Functionality:
+Tests whether a File object can be serialized to a byte vector and then deserialized back to an identical File object. Checks both the filename and the data vector.
+"Suppose a user uploads a file named notes.txt containing the text abc. The system serializes this file for network transfer and then deserializes it on the server to reconstruct the original file."
+text within the file: {'a', 'b', 'c'}
+
+Test Case: Request Serialization
+Functionality:
+Tests whether a Request object (which contains a filename) can be serialized and deserialized without data loss.
+"A user requests to download file.txt from the server. The filename is serialized into a request message, sent to the server, and then deserialized to process the request."
+Request: file.txt
+
+Test Case: Status Serialization
+Functionality:
+Verifies that a Status object (with a status code and message) can be serialized and deserialized correctly.
+"After a file operation, the server responds with a status code STATUS_OK and the message SUCCESS. This status is serialized, sent to the client, and then deserialized for display."
+Status: find if it is SUCCESS
+
+Test Case: Edge Cases
+Functionality:
+Tests serialization and deserialization with empty or minimal values (e.g., empty filename, empty data vector, empty message) to ensure the system handles edge cases gracefully.
+"A user tries to upload an empty file or sends a request with an empty filename. The system must serialize and deserialize these cases without errors."
+
+Test Case: Malformed Inputs
+Functionality:
+Tests deserialization functions with malformed or incomplete byte vectors to ensure the system detects and handles invalid input robustly (e.g., by throwing exceptions).
+"A network error corrupts a message, resulting in a malformed byte vector. The system must detect the error during deserialization and avoid crashing or misinterpreting the data."
+three different tests ({0xA0}, {0x00, 0x00, 0x00}, {0x10, 0x20})
+
+The test cases for large files are in teh same format but no specific tests were implemented but the idea I understoon which I implemented by adjusting it to max bytes this server can hold. 

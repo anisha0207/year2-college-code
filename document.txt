@@ -1,0 +1,3 @@
+[START] This is the beginning of the document.
+Hello World!
+[END] This is the end of the document.
