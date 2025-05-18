@@ -1,22 +1,57 @@
-test: libpack109.a test.o
-	g++ build/objects/release/test.o -o tester -lpack109 -Lbuild/lib/release -std=c++11
-	mkdir -p build/bin/release
-	mv tester build/bin/release/test
+# Compiler and flags
+CXX = g++
+CXXFLAGS = -std=c++17 -Wall -Iinclude
 
-libpack109.a:
-	g++ src/lib.cpp -c -Iinclude -std=c++11
-	ar rs libpack109.a lib.o 
-	mkdir -p build/lib/release
-	mkdir -p build/objects/release
-	mv *.o build/objects/release
-	mv libpack109.a build/lib/release
+# Directories
+SRC_DIR = src
+INCLUDE_DIR = include
+BUILD_DIR = build
+BIN_DIR = bin
+TESTS_DIR = tests
 
-test.o:
-	g++ test/test.cpp -c -lpack109 -Lbuild/lib/release -Iinclude -std=c++11
-	mkdir -p build/objects/release
-	mv test.o build/objects/release
+# Source files and object files
+SOURCES = $(wildcard $(SRC_DIR)/*.cpp)
+OBJECTS = $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SOURCES))
 
+# Target executable
+TARGET = $(BIN_DIR)/HashMapApp
+
+# Default rule: build the target
+all: $(TARGET)
+
+# Rule to build the target executable
+$(TARGET): $(OBJECTS) | $(BIN_DIR)
+	@echo "Linking object files to create executable..."
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+# Rule to compile source files into object files
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp | $(BUILD_DIR)
+	@echo "Compiling $< into $@..."
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+# Create build directory if it doesn't exist
+$(BUILD_DIR):
+	@echo "Creating build directory..."
+	mkdir -p $(BUILD_DIR)
+
+# Create bin directory if it doesn't exist
+$(BIN_DIR):
+	@echo "Creating bin directory..."
+	mkdir -p $(BIN_DIR)
+
+# Clean up build artifacts
 clean:
-	rm -f *.a
-	rm -f *.o
-	rm -rf build
+	@echo "Cleaning up build artifacts..."
+	rm -rf $(BUILD_DIR) $(BIN_DIR)
+
+# Run the program
+run: all
+	@echo "Running the program..."
+	./$(TARGET)
+
+# Test rule (optional, if you want to run tests)
+test: all
+	@echo "Running tests from $(TESTS_DIR)/test.txt..."
+	./$(TARGET) < $(TESTS_DIR)/test.txt
+
+.PHONY: all clean run test

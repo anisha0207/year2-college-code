@@ -1,0 +1,11 @@
+HashMap/
+├── include/
+│   ├── HashMap.h               # Header file for HashMap class implementing key-value pairs
+├── src/
+│   ├── HashMap.cpp             # Implementation of HashMap class
+│   ├── Main.cpp                # Main file to test the implementation
+├── tests/
+│   ├── test.txt
+    |-- layout.txt               # Unit tests for HashMap functionality
+├── Makefile                    # Build system file
+└── README.md                   # Documentation for the project
