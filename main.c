@@ -1,83 +1,66 @@
-#include "linkedlist.h"
-#include "testCase.h"
+//start
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include "myls.h"  // including the header file into this program
 
-#define TEST 30      // Max number of test cases
-#define LENGTH 100   // Max characters per test case (including null terminator)
+//the main program will execute whether the inputs have an argument or not in order to output the files depending on if it is hidden or not
+//the necessary flags below indicate whether all files are shown as hidden or not including hidden as the type of arguments
+//using argc as integer passed in the command-line arguments, in this case, argc is the postion where the file name is mentioned
+//argv is the array of strings within the command-line argument, it is always the name of the program. It checks for the neccessary flag position which is important here
 
-// Function to read tests from a file
-// Two parameters: filename (the name of the file to read) and tests (a 2D array to store the test cases)
-int read(const char* filename, char tests[TEST][LENGTH]) {
-    FILE* file = fopen(filename, "r"); // Open the file in read mode
-    if (!file) { // Check if the file was opened successfully
-        printf("Error: Can't open %s\n", filename); // Print an error message if the file couldn't be opened
-        return -1; // Return -1 to indicate failure
-    }
+int main(int argc, char *argv[]) {
+    int all = 0;
+    int long1 = 0;
+    char *directory = ".";  // need this for the else statement if there is no flag; setting parameter variable
 
-    int count = 0; // Initialize the count of test cases read
-    char buffer[LENGTH]; // Temporary buffer to hold each line from the file
-
-    // This loop reads lines from the file until:
-    // - The maximum number of test cases (TEST) is reached
-    // - Or there are no more lines in the file
-    while (count < TEST && fgets(buffer, LENGTH, file)) {
-    // Remove newline character if it exists
-    buffer[strcspn(buffer, "\n")] = '\0';
-
-    // Skip empty lines, comments, and invalid lines
-    if (strlen(buffer) == 0 || buffer[0] == '-' || buffer[0] == '*' || !strchr("HTNDCEAQZSWX", buffer[0])) {
-        continue; // Go to the next iteration of the loop
-    }
-
-    // Copy valid test cases
-    strncpy(tests[count], buffer, LENGTH - 1);
-    tests[count][LENGTH - 1] = '\0';
-    count++;
-}
-
-    fclose(file); // Close the file after reading all lines
-
-    // Debugging Output: Print all loaded tests
-    //printf("Loaded %d Test Cases:\n", count);
-    // for (int i = 0; i < count; i++) {
-    //     printf("Test %d: %s\n", i + 1, tests[i]);
-    // }
-
-    return count; // Return the number of test cases successfully read
-}
-
-int main() {
-    char tests[TEST][LENGTH];//declares 2D array as tests to store the test cases
-    const char* testFile = "tests"; // Hardcoded test file name for simplicity
-    // Read the tests from the file
-    int test_count = read(testFile, tests);//calls the read_tests function, passing the file name and the tests array.
-    if (test_count == -1) {
-        return 1; // Exit if the test file couldn't be read
-    }//if read_tests encountered an error (indicated by returning -1)
-
-    int fails = 0;
-
-    // Loop through each test and execute it
-    for (int i = 0; i < test_count; i++) {
-        List list;
-        initList(&list);//'&' used is important during debugging since it is the "address-of" function that returns the address of list variable
-
-        printf("\nExecuting Test %d: %s\n", i + 1, tests[i]);
-        int result = test(&list, tests[i]);
-        if (result == 0) {
-            printf("Test %d passed\n", i + 1);
-        } else {
-            printf("Test %d failed\n", i + 1);
-            fails++;
+    // if no arguments are supplied in the current directory
+    if (argc == 1) {
+        show_directory(directory);  // calls this function to list the contents of the current directory; prints the files (excluding hidden files)
+    } else {
+        // this time, it needs to be able to print ./myls folder name without " " empty in show directory
+        //strcmp () source is cited for understanding more about this function's use 
+        for (int i = 1; i < argc; i++) {
+            if (strcmp(argv[i], "-a") == 0 || strcmp(argv[i], "--all") == 0) {  // handles flags for -a and -all
+                all = 1;  // lists all files, including hidden files
+            } else if (strcmp(argv[i], "-l") == 0) {// handles flags for -l
+                long1 = 1; //lists files with details, exlcuding hidden files
+            } else if (strcmp(argv[i], "-al") == 0 || strcmp(argv[i], "-la") == 0) {//handles flags for -al and -la
+                long1 = 1;//this function includes all files, including hidden ones where details are printed out
+                all = 1;
+            } else if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--version") == 0) {//handles flags for -v and --version 
+                printf("my_ls v.1.0 by Anisha Dasgupta\n");//prints this simply
+                return 0;
+            } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {//handles flags for -h and --help
+                printf("Program Usage: using the ls command where it lists the contents of directory with options to display hidden files and detailed info.\n");
+                printf("Description: myls program prints the contents of the directory with flags to show the hidden files, details or display the version or the help info.\n");
+                printf("-a, --all: displays all files, including hidden files.\n");
+                printf("-l: shows details for each file.\n");
+                printf("-al, -la: combination of -a and -l (shows hidden file and detailed info).\n");
+                printf("-v, --version: prints version of the program.\n");
+                printf("-h, --help: displays help message which describes the program and the options.\n");
+                printf("Types of output values: \n");
+                printf("myls : listing the current directory\n");
+                printf("myls -a : showing the hidden files\n");
+                printf("myls -l /home : shows details of the files that are in the /home\n");//prints this manual 
+                return 0;
+            } else if (argv[i][0] != '-') {//if no flag exists or simply types anything without '-', then it simply prints the files that are within the directory
+                directory = argv[i];
+            }
         }
-        freeList(&list);
     }
 
-    // Print results
-    printf("Passed: %d\n", test_count - fails);
-    printf("Failed: %d\n", fails);
+    // when executed as either all, or long1 or both, all of that is displayed below on the types of function to call for
+    if (all && long1) {
+        show_directory_long_all(directory);  // this function includes all files, including hidden ones where details are printed out
+    } else if (long1) {
+        show_directory_long(directory);  // excludes hidden files, but prints files with details
+    } else if (all) {
+        show_directory_all(directory);  // just prints files within directory, including hidden
+    } else {
+        show_directory(directory);  // prints files within directory, excluding hidden files
+    }
 
-    return fails; // Return the number of failed tests as the program's exit code
+    return 0;  // if there are arguments supplied
 }
+
+
