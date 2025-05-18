@@ -1,403 +1,150 @@
 # CSE109 - Systems Software - Spring 2025
 
-# Homework 4 - Implementing a Protocol: Pack109
+# Midterm Exam 2
 
-**⏰ Due Date: 5/2/2025 EOD**
+⏰ **Due by: 4/11/2025 EOD**
 
-## Instructions 
+## Ethics Contract
 
-**Read thoroughly before starting your project:**
+**FIRST**: Please read the following carefully:
 
-1. Fork this repository into your CSE109 project namespace. [Instructions](https://docs.gitlab.com/ee/workflow/forking_workflow.html#creating-a-fork)
-2. Clone your newly forked repository onto your development machine. [Instructions](https://docs.gitlab.com/ee/gitlab-basics/start-using-git.html#clone-a-repository) 
-3. As you are writing code you should commit patches along the way. *i.e.* don't just submit all your code in one big commit when you're all done. Commit your progress as you work. 
+- I am the sole author of the content within this exam unless otherwise cited.
+- I am not an uncredited author of any content in any other exam.
+- I will not dicsuss the exam until after the submission deadline.
+- All resources I used (including text books and online references, websites, language models), are cited in this exam.
+- I will not plagiarize someone else's work and turn it in as my own. If I use someone else's work in this exam, I will cite that work. Failure to cite work I used is plagiarism.
+- I understand that acts of academic dishonesty may be penalized to the full extent allowed by the [Lehigh University Code of Conduct][0], including receiving a failing grade for the course. I recognize that I am responsible for understanding the provisions of the Lehigh University Code of Conduct as they relate to this academic exercise.
 
-**💥IMPORTANT: You must commit frequently as you work on your project. As a general rule try to make at least one commit per function you implement.**
+If you agree with the above, type your full name next to the pen emoji, along with the date. Your exam **will not be graded** without this assent.
 
-4. When you've committed all of your work, there's nothing left to do to submit the assignment.
+---------------------------------------------
+🖋️Anisha Dasgupta
+---------------------------------------------
 
-## Assignment Background
+💥 **IMPORTANT:** When you are done, make your first commit with the commit message: `I, <your full name here>, agree to the ethics contract`.
 
-Imagine talking over a 1-way communication channel. 
+💥 **IMPORTANT: As you are working on your midterm, commit your progress regularly.**
 
-1. Tune to pre-agreed frequency
-2. The sender starts with their name or ID. e.g. “Alice to Bob…”
-3. After each transmission let go of transmit button and wait for response. 
-  3.1 After timeout period, retransmit
-4. Upon recipt of response, transmit message. Say "over" to indicate end of message. e.g: “meet at the park at 5. Over.”
-5. Wait for response as in step 3. Continue until transmission is over.
-6. Say "Over and out" to indicate there will be no further transmissions.
+## Exam Prelude
 
-Protocols like this allow for reliable, clear, orderly communications over a channel with heavy limitations (one-way, broadcast). 
+This exam will test your ability to independently:
 
-We use protocols all the time in computer systems to bring these properties to computer communication. You may have encountered such protocols in your own life such as HTTP - the Hypertext Transfer Protocol, which is used to transfer data over the web. Or TCP, the Transmission Control Protocol, which is used to ensure reliable communication over the internet. Or FTP, the File Transfer Protocol, which is used to transfer files over the internet.
+- Use the basics of the C and C++ progamming language including classes and libraries
+- Implement algorithms and routines that use this data structure
+- Evaluate the performance and correctness of this data structure.
 
-In this assignment we are going to implement a protocol called Pack109, which is designed for this class and can be used to transmit objects that we write in C++ over a network. It involves a process of "serialization" and "deserialization" which we will discuss here.
+You're going to implement a `HashMap` data structure, which is an associative data structure that maps keys to values.
 
-### Serialization / Deserialization
+This repository is blank except for this README file. It's your job to create this program from scratch. This time however, you will not be given explicit step-by-step instructions on *how* to do this, you are expected to demonstrate your ability to do this. You are going to lay out the directory structure, create a header file, create library source files, implement your exam. 
 
-This conversion process is known as **serialization** -- the act of transforming in-memory data structures or objects into a format (typically a linear stream of bytes) that can be stored or transmitted and later reconstructed. Serialization has been a fundamental concept in computer science since the early days of distributed systems, when developers needed a way to persist objects or transfer them over the network while preserving their structure and type.
+You can use any resources from previous assignments to aid in your completion of this exam. Just be sure to cite any work you use from another source (even if you are the author). 
 
-The complementary process, **deserialization**, reconstructs the original data structure from a sequence of bytes, making it usable again within the program's memory. Together, these processes are essential not just for network communication, but also for saving application state, inter-process communication (IPC), and implementing remote procedure calls (RPC).
+You can use any libraries and functions you like to accomplish this. 
 
-#### An Example - Serializing a struct
+**There is an oral portion to this exam**. For this portion, I will ask you to record an explanation of your work along with your screen. For more info, see Part 2. You will not be able to pass this exam without doing this portion.
 
-Let's consider this struct in C++, although the idea here is generally applicable to languages and data structures.
+### Completeness
 
-```c++
-struct Person {
-    std::string name; // e.g., "Bob"
-    char age;         // e.g., 30
-    float height;     // e.g., 1.75f
-};
-```
+As a general note / tip, this exam specifies the highest expectations for your exam submission. But in general it's better to submit an exam that answers all questions partially than an exam that only answer the fisrt few quesitons fully. 
 
-For this example assume:
+You may find in the course of doing your exam, that cutting a corner or not meeting a requirement allows your life to be easier and allows you to get past something that's blocking you, you should take that shortcut. It might cost you a couple points in functionality/robustness, but you'll earn  more points in completeness.
 
-- Architecture: 64-bit little-endian
-- Strings are serialized as:
-    - 1 byte for length
-    - N bytes for characters
-- float values follow IEEE 754 format (4 bytes)
-- char is 1 byte
+### Commit Policy
 
-We're only serializing data, not the memory layout (so no raw pointers or padding). Meaning that the original struct might look like this in C++ memory:
+The exam is divided into discrete "questions", and you must make at least one commit per question to receieve full credit for the question. You can do the questions in any order, and you can go back to questions for which you have already made a commit. The commit message for each question should be "QUESTION N" where N is the number of the question.
 
-```
-| ptr to "Bob" | age (0x1E) | padding | height (1.75f) |
-|   8 bytes    |   1 byte   | 3 bytes |   4 bytes      |
-```
+## Part 1 - In Class
 
-But we do not capture this in the serialization. Therefore the recipient might serialize the stuct to a different memory layout, but it should nevertheless have the same data as the original.
+**To be taken during recitation on Tuesday or Wednesday. It will be due when you leave recitation.**
 
+You will start this portion in recitation and you will have the whole time to take it. Recitation will be extended to 9:30PM to allow for enough time for those who have accomodations. If other accomodations are needed, see me. You will receive instructions on how to compelte that portion at recitation.
 
-To serialize the struct, we have to serialize each of the fields of the struct:
+For this portion, you will extend your Homework 3 in some way. That's all I will say for now.
 
-1. name = "Bob"
+## Part 2 - Take Home
 
-```
-Length = 3 → 0x03
-Characters:
-'B' → 0x42
-'o' → 0x6F
-'b' → 0x62
-```
+**To be taken at home. It will be due Friday 4/11 EOD.**
 
-2. age = 30
+You will implement a hash map, a data structure that stores key-value pairs. Like a hash set, it allows for constant-time insertion, deletion, and lookup of values based on their associated keys. Internally, it uses a hash function to convert each key into an index in an array (called a bucket array), where the key-value pair is stored. If multiple keys hash to the same index, collisions are handled using techniques like linked lists or open addressing.
 
-```
-ASCII value of 30 → 0x1E
-```
+- A hash set only stores unique values (no keys), and is used to check for the presence or absence of individual items. You've implemented this already, and the equivalent C++ data structure in the STL is `std::unordered_set`.
 
-3. height = 1.75f
+- A hash map, on the other hand, stores (key, value) pairs and is used to associate values with keys, like a dictionary.  The equivalent C++ data structure in the STL is [`std::unordered_map`](https://en.cppreference.com/w/cpp/container/unordered_map).
 
-```
-In IEEE 754 (32-bit float), 1.75f = 0x3FE00000
-In little-endian order: 00 00 E0 3F
-```
+### Question 1 
 
-So the final serialized struct would be 
+Lay out your project structure.
+**All of these are references to the homework three project structure. It's in layout.txt file.
 
-```
-[03 42 6F 62 1E 00 00 E0 3F]
-```
 
-Which again means:
+### Question 2
 
-```
-0x03	        Name length (3)
-0x42 6F 62	    "Bob"
-0x1E	        Age = 30
-0x00 00 E0 3F	Height = 1.75f
-```
+Implement a class "KeyValuePair" which will hold a key and a value. Choose appropriate data types for the keys and value. Write appropriate constructors, destructors, and member functions.
 
-We could then send this over the network or write it to a file. When we receive this data, we can deserialize by apply the serialization routine backwards, reading the bytes in the same order and reconstructing the original struct.
+### Question 3
 
-But how does the recipient know how to deserialize this struct into the correct Person object on its side? That's where the protocol comes in; the recipient should know ahead of time that these byte represent a person struct, and it should know what all the bytes mean. Meaning the recipient should know ahead of time, according to the protocol:
+Implement a class "HashMap" which will be the basis for the data structure we will create. It should have the following member functions (you'll implement them in the next questions, just lay out the class for now):
 
-```
- Name len    Age
- \/          \/
-[03 42 6F 62 1E 00 00 E0 3F]
-    \ Name /    \  Height /     
-```
+- `bool insert(T key, U value);`: Inserts a key-value pair into the hash map. If the key already exists, it should update the value.
+- `bool remove(T key);`: Removes a key-value pair from the hash map. If the key does not exist, it should return `false`. If it does, it should return `true`.
+- `bool get(T key, U& value_out);`: Returns the value associated with the key. If the key does not exist, it should return false, otherwise it returns true, and a pointer to the value is returned in the `value_out` parameter.
 
-But this protocol will only work for Person data structures. If we want to serialize/deserialize general structs and objects, we must define a protocol that can be used for any data structure. This is what Pack109 does.
+### Question 4
 
-In this assignment, you will implement hte Pack109 protocol for C++, by writing a set of functions that convert data types and data structures in C++ into a vector of bytes (serialization, or "ser"). Additionally, you will write a set of functions that reverse this process, converting vectors of bytes back into their original data types or data structures (deserialization, or "de").
+Implement `insert()`
 
-### Deliverables
+### Question 5
 
-The deliverables for this assignment are:
+Implement `remove()`
 
-- serde function implementations
-- unit tests for all implemented functions
+### Question 6
 
-#### Functions
+Implement `get()`
 
-There are a number of serialization and deserialization functions stubbed out in `include/pack109.hpp` that you are to implement in `src/lib.cpp`. I've implemented 4 of them for you as examples. You are to implement the rest. In addition, you are to write a test for each of them in `test/test.cpp`. I've given you examples of how to write these tests for the 4 functions I've implemented. One of the tests fails intentionally (fix it). I've also provided a function to print the byte vector contents. It may seem like a lot of functions at first, but many of them are similar with the only difference being an adjustment to the number of times a loop iterates
+## Part 3 - Code Demo and Evaluation
 
-To run the tests, do `make test` and then run the test program in `build/bin/release/test`.
+This is the oral portion of the exam. You will record an explanation for your program which demonstrates its implementation and functionality. You don't have to show your face but you do have to record your voice (accommodations are available upon request). You should be sure to cover the following points in your discussion:
 
-**REMEMBER** you must make at least one commit per function.
+First, demonstrate the HashMap's core functions:
+  - Demonstrate `insert()`
+  - Demonstrate `remove()`
+  - Demonstrate `get()`
 
-#### Tests
+Next, demonstrate the HashMap's performance. Use a timer to measure the performance of the following operations:
+  - insert/remove/get 100 items.
+  - insert/remove/get 1000 items.
+  - insert/remove/get 10000 items.
+  
+As part of your explaination, be sure to explain the following in detail:
+  - How did you implement the insert function?
+  - How did you implement the get function?
+  - Does the performance of the hash map meet your expectations? Why or why not?
+  - Make a note of your challenges and where you got stuck.
 
-When you are done, you should have at least the following tests for all of the functions you have implemented. You should also write a continuous integration (CI) script that runs all of your tests against your codebase every time you commit to your project. At the end, you should have at least 26 tests, but probably more.
+If you didn't finish the exam in is entirety, explain how you attempted to solve it and where you got stuck. This will get you at least some points. 
 
-Make sure to test edge cases, including but not limited to:
+You can use Zoom to do this, [here is a link](https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0059856) to some instructions. You don't have to record your face, only your voice and the screen. Go through the answer and explain how you arrived there. Your goal with this question is to convince me you know what you are talking about, so I want you to do this without reading a script or written answer. Just go through line by line and explain what the program does. When you are done, upload your recording to your Lehigh Drive and add a link below. 
 
-- What happens when the transmission is malformed?
-- What happens when there are missing sections or the lenghts are off?
-- What happens for very large data?
-- What happens for very small data, or empty data?
+**⚠️IMPORTANT: Make sure you give blanket permission to the link holder to view the file**
 
-### Pack109 Object Serialization Format
+🎥 Paste Recording Link(s) Here:
 
-Pack109 is a binary object serialization format that flattens a number of different datatypes into a format suitable for transmission over a channel.
+## Submission
 
-#### Overview
+Please submit your completed exam, which should include:
 
-In the table below I've listed the 16 available objects in the Pack109 serialization format.
+1. Your program source code
+2. A recording link with permission to view granted to the link holder.
+3. No need to include binary / executable files.
 
-| Type                    | Tag (Hex) | 
-| ----------------------- | --------- |
-| Bool (true)             |   0xa0    |
-| Bool (false)            |   0xa1    |
-| Unsigned 8-bit Integer  |   0xa2    |
-| Unsigned 32-bit Integer |   0xa3    |
-| Unsigned 64-bit Integer |   0xa4    |
-| Signed 8-bit Integer    |   0xa5    |
-| Signed 32-bit Integer   |   0xa6    |
-| Signed 64-bit Integer   |   0xa7    |
-| 32-bit Floating Number  |   0xa8    |
-| 64-bit Floating Number  |   0xa9    |
-| 8-bit String            |   0xaa    |
-| 16-bit String           |   0xab    |
-| 8-bit Array             |   0xac    |
-| 16-bit Array            |   0xad    |
-| 8-bit Map               |   0xae    |
-| 16-bit Map              |   0xaf    |
-
-#### Notation Key
-
-```
-one byte:
-┌────────┐
-│        │
-└────────┘
-
-a variable number of bytes:
-╔════════╗
-║        ║
-╚════════╝
-
-variable number of objects stored in Pack109 format:
-╭╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╮
-┆                 ┆
-╰╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯
-```
-
-#### Bool
-
-Bool is for serializing `true` and `false` boolean values. Although we can represent these values in one bit in C and C++, we have to use 8 bits to represent them in our serialized format.
-
-```
-true:
-┌────────┐
-│  0xa0  │
-└────────┘ 
-
-false:
-┌────────┐
-│  0xa1  │
-└────────┘ 
-```
-
-#### Integers
-
-Integers are for storing signed and unsigned `chars`, `ints`, and `longs`.
-
-```
-u8 stores a 8-bit unsigned integer
-┌────────┬────────┐
-│  0xa2  │ZZZZZZZZ│
-└────────┴────────┘ 
-
-u32 stores a 32-bit big-endian unsigned integer
-┌────────┬────────┬────────┬────────┬────────┐
-│  0xa3  │ZZZZZZZZ│ZZZZZZZZ│ZZZZZZZZ│ZZZZZZZZ│
-└────────┴────────┴────────┴────────┴────────┘ 
-
-u64 stores a 64-bit big-endian unsigned integer
-┌────────┬────────┬────────┬────────┬────────┬────────┬────────┬────────┬────────┐
-│  0xa4  │ZZZZZZZZ│ZZZZZZZZ│ZZZZZZZZ│ZZZZZZZZ│ZZZZZZZZ│ZZZZZZZZ│ZZZZZZZZ│ZZZZZZZZ│
-└────────┴────────┴────────┴────────┴────────┴────────┴────────┴────────┴────────┘ 
-
-i8 stores a 8-bit signed integer
-┌────────┬────────┐
-│  0xa5  │ZZZZZZZZ│
-└────────┴────────┘ 
-
-i32 stores a 32-bit big-endian signed integer
-┌────────┬────────┬────────┬────────┬────────┐
-│  0xa6  │ZZZZZZZZ│ZZZZZZZZ│ZZZZZZZZ│ZZZZZZZZ│
-└────────┴────────┴────────┴────────┴────────┘
-
-
-i64 stores a 64-bit big-endian signed integer
-┌────────┬────────┬────────┬────────┬────────┬────────┬────────┬────────┬────────┐
-│  0xa7  │ZZZZZZZZ│ZZZZZZZZ│ZZZZZZZZ│ZZZZZZZZ│ZZZZZZZZ│ZZZZZZZZ│ZZZZZZZZ│ZZZZZZZZ│
-└────────┴────────┴────────┴────────┴────────┴────────┴────────┴────────┴────────┘
-
-```
-
-#### Floats
-
-Floats are for serializing big-endian IEEE 754 single and double precision floating point numbers like `floats` and `doubles`. Extension of precision from single-precision to double-precision does not lose precision.
-
-```
-f32 stores a single-width floating point number
-┌────────┬────────┬────────┬────────┬────────┐
-│  0xa8  │ZZZZZZZZ│ZZZZZZZZ│ZZZZZZZZ│ZZZZZZZZ│
-└────────┴────────┴────────┴────────┴────────┘
-
-f64 stores a double-width floating point number
-┌────────┬────────┬────────┬────────┬────────┬────────┬────────┬────────┬────────┐
-│  0xa9  │ZZZZZZZZ│ZZZZZZZZ│ZZZZZZZZ│ZZZZZZZZ│ZZZZZZZZ│ZZZZZZZZ│ZZZZZZZZ│ZZZZZZZZ│
-└────────┴────────┴────────┴────────┴────────┴────────┴────────┴────────┴────────┘
-```
-
-#### Strings
-
-Strings are for serializing strings and c-strings. If you want to serialize an array of bytes that aren't meant to represent characters, use an Array instead (see below).
-
-```
-s8 stores a byte array whose length is up to (2^8)-1 bytes:
-┌────────┬────────┬════════╗
-│  0xaa  │YYYYYYYY│  data  ║
-└────────┴────────┴════════╝
-
-YYYYYYYY is a 8-bit unsigned integer which represents the length of the data
-
-s16 stores a byte array whose length is up to (2^16)-1 bytes:
-┌────────┬────────┬────────┬════════╗
-│  0xab  │ZZZZZZZZ│ZZZZZZZZ│  data  ║
-└────────┴────────┴────────┴════════╝
-
-ZZZZZZZZZZZZZZZZ is a 16-bit unsigned integer which represents the length of the data
-```
-
-#### Arrays
-
-Arrays are for serializing arrays of homogenous datatypes. Each object in the serialized array should be one of the other objects in the Pack109 spec. For example, you can serialize an array of u8s, an array of strings, or even an array of arrays.
-
-```
-a8 stores an array whose length is up to (2^8)-1 elements:
-┌────────┬────────┬╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╮
-│  0xac  │YYYYYYYY│    N objects    ┆
-└────────┴────────┴╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯
-
-YYYYYYYY is a 8-bit unsigned integer which represents the length of the data
-
-a16 stores an array whose length is up to (2^16)-1 elements:
-┌────────┬────────┬────────┬╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╮
-│  0xad  │ZZZZZZZZ│ZZZZZZZZ│    N objects    ┆
-└────────┴────────┴────────┴╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯
-
-ZZZZZZZZZZZZZZZZ is a 16-bit unsigned integer which represents the length of the data
-```
-
-#### Maps
-
-Maps are for serializing datastructures that can be represented by key-value pairs. This includes associative arrays, structs, and objects.
-
-```
-m8 stores a map whose length is upto (2^8)-1 elements
-┌────────┬────────┬╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╮
-│  0xae  │YYYYYYYY│   N*2 objects   ┆
-└────────┴────────┴╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯
-
-YYYYYYYY is a 8-bit unsigned integer which represents the length of the data
-
-m16 stores a map whose length is upto (2^16)-1 elements
-┌────────┬────────┬────────┬╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╮
-│  0xaf  │ZZZZZZZZ│ZZZZZZZZ│   N*2 objects   ┆
-└────────┴────────┴────────┴╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯
-
-ZZZZZZZZZZZZZZZZ is a 16-bit unsigned integer which represents the length of the data
-```
-
-For example, consider the following struct:
-
-```
-struct Person {
-  char age;
-  float height;
-  string name;
-}
-```
-
-You can serialize this into a map of maps. Let's say we have the following values in our struct:
-
-```
-struct Person ann = { age: 10, height: 3.4, name: "Ann" };
-```
-
-We could serialize this into the following byte vector:
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│0xae   // map tag                                                            │
-│0x01   // 1 kv pair                                                          │
-├─────────────────────────────────────────────────────┬───────────┬───────────┤
-│0xaa   // string8 tag                                │           │           │
-│0x06   // 6 characters                               │ key       │           │
-│Person // the string "Person"                        │           │           │
-├─────────────────────────────────────────────────────┼───────────┤  pair 1   │
-│0xae   // the value associated with the key is a map │           │           │
-│0x03   // 3 kv pairs                                 │           │           │
-├──────────────────────────────┬───────────┬──────────┤           │           │
-│0xaa   // string8 tag         │           │          │           │           │
-│0x03   // 3 characters        │ key       │          │           │           │
-│age    // the string "age"    │           │          │           │           │
-├──────────────────────────────┼───────────┤ pair 1   │           │           │
-│0xa2   // u8 tag              │ value     │          │           │           │
-│0x0a   // 10                  │           │          │           │           │
-├──────────────────────────────┼───────────┼──────────┤           │           │
-│0xaa   // string8 tag         │           │          │ value     │           │
-│0x06   // 6 characters        │ key       │          │           │           │
-│height // the string "height" │           │          │           │           │
-├──────────────────────────────┼───────────┤ pair 2   │           │           │
-│0xa8   // f32 tag             │ value     │          │           │           │
-│3.4    // float value 3.4     │           │          │           │           │
-├──────────────────────────────┼───────────┼──────────┤           │           │
-│0xaa   // string8 tag         │           │          │           │           │
-│0x04   // 4 characters        │ key       │          │           │           │
-│name   // the string "name"   │           │          │           │           │
-├──────────────────────────────┼───────────┤ pair 3   │           │           │
-│0xaa   // string8 tag         │           │          │           │           │
-│0x03   // 3 characters        │ value     │          │           │           │
-│Ann    // the string "Ann"    │           │          │           │           │
-└──────────────────────────────┴───────────┴──────────┴───────────┴───────────┘           
-```
-
-The total length of this byte vector would be 43 bytes.
-
-## Assignment Evaluation
-
-Deliverables:
-
-- Source code for your protocol implementation.
-
-- Tests for every function
-
-- A [.gitlab-ci.yml](https://docs.gitlab.com/ci/) script that runs your code against the provided tests.
-
-Some things to keep in mind:
-
-- Only files under vesion control in your forked assignment repository will be graded. Local files left untracked on your computer will not be considered.
+- Only files under version control in your forked assignment repository will be graded. Local files left untracked on your computer will not be considered.
 
 - Only code committed *and pushed* prior to the time of grading will be accepted. Locally committed but unpushed code will not be considered.
 
 - Your assignment will be graded according to the [Programming Assignment Grading Rubric](https://drive.google.com/open?id=1V0nBt3Rz6uFMZ9mIaFioLF-48DFX0VdkbgRUDM_eIFk).
+
+Your submission should be organized, well-commented, and easy to understand. Remember to document any assumptions you made during the implementation process, as well as any limitations of your solution. Your final exam will be graded on the correctness, completeness, and clarity of your submission.
+
+## Works Cited
+
+List all sources used during the exam here.
