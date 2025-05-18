@@ -1,171 +1,122 @@
-# CSE109 - Systems Software - Spring 2025
+# Hashset Analysis
 
-# Homework 2 - Implementing and Evaluating a Data Structure in C
+## About
+This code consists of hashset implmentation where it uses std::unorder_set from the standard library. The benchmark contains performance of how hashset is carried through load factors from insertioon, contains, and remove. Two charts are displayed to capture this performance.
 
-**⏰ Due Date: 3/14/2025 EOD**
-
-## Instructions 
-
-**Read thoroughly before starting your project:**
-
-1. Fork this repository into your CSE109 project namespace. [Instructions](https://docs.gitlab.com/ee/workflow/forking_workflow.html#creating-a-fork)
-2. Clone your newly forked repository onto your development machine. [Instructions](https://docs.gitlab.com/ee/gitlab-basics/start-using-git.html#clone-a-repository) 
-3. As you are writing code you should commit patches along the way. *i.e.* don't just submit all your code in one big commit when you're all done. Commit your progress as you work. 
-4. When you've committed and pushed all of your work, there's nothing left to do to submit the assignment.
-
-**💥IMPORTANT: You must commit frequently as you work on your project. As a general rule try to make at least one commit per function you implement.**
-
-## Assignment
-
-You will implement a linked list data structure in C. The linked list will consist of a `head` pointer and a tail pointer. The head pointer will point to a `Node` struct, which will hold a data void pointer as well as a pointer to the next node in the list. The `tail` pointer will point to the final node in the linked list. The `next` pointer on the tail will point to `NULL`.
-
-
-```
-  ┌─────────┐    ┌─────────┐   ┌─────────┐    ┌─────────┐
-  │     head│--->│  void*  │-->│  void*  │--->│  void*  │---> NULL
-  │         │    └─────────┘   └─────────┘    └─────────┘
-  │     tail│--------------------------------------^
-  └─────────┘
-```
-
-
-The `List` and `Node` structs are declared in `linkedlist.h`, along with a number of functions you will need to implement.
-
-```c
-// Initialize an empty list. The head and tail pointers should point to NULL.
-void initList(List* list_pointer);
-
-// Create Node struct containing a void pointer to an item, return pointer to the newly created Node struct
-Node* createNode(void* item);
-
-// Insert new Node at the end of the list, containing a void pointer to item. The next pointer on this Node
-// points to NULL. On success return 0. On failure, return 1.
-int insertAtTail(List* list_pointer, void* item);
-
-// Insert a Node at the head of the list, containing a void pointer to item. The next pointer on the
-// newly created node points to the previous head of the list. On success return 0. On failure, return 1.
-int insertAtHead(List* list_pointer, void* item);
-
-// Insert a Node at the specified index, containing a void pointer to item. If the index is greater than
-// the length of the list, the program should crash. On success return 0. On failure, return 1.
-int insertAtIndex(List* list_pointer, int index, void* item);
-
-// Remove Node from the end of list and return the void pointer it contains. The preceding Node should
-// point to NULL after this operation. On failure return a NULL pointer.
-void* removeTail(List* list_pointer);
-
-// Remove Node from start of list and return return the void pointer it contains. The following Node should 
-// be the new head of the list. On failure return a NULL pointer.
-void* removeHead(List* list_pointer);
-
-// Insert Node item at a specified index and return return the void pointer it contains. The Node at the specified
-// index before this function is called should be the next Node following the newly inserted Node.
-// On failure return a NULL pointer.
-void* removeAtIndex(List* list_pointer, int index);
-
-// Return the pointer stored in the Node at the specified index. On failure return a NULL pointer. 
-void* itemAtIndex(List* list_pointer, int index);
-
-// Return true if the list contains the given item at least once, false otherwise.
-bool contains(List* list_pointer, void* item);
-
-// Returns the size of the list, measured in nodes.
-int size(List* list_pointer);
-```
-
-There is a print function that is already implemented for you. This will help you inspect the list as you write the above functions.
-
-🤔 Hint: Feel free to implement any helper functions you need beyond the required functions.
-
-## Validation
-
-For this part of the assignment, you will evaluate your linked list implementation to verify that it's working correctly. To do this, you will write a program (make a new `.c` file in the `/src/bin` dir) that reads in a test file containing byte code strings that test the functionality of your linked list data structure. The test code is found in the file named "tests", found in the root directory of this assignment repository.
-
-Byte code is a low-level representation of code that can be executed by a virtual machine or interpreter. In this case, the byte code is a series of commands that specify how to modify, query, and assert the state of the linked list data structure. You can find a grammar for the byte code in the test file itself.
-
-Your program will serve as an interpreter for this byte code, executing each command in turn and verifying that the output matches the expected result. The interpreter will provide a way to test the linked list in a controlled and repeatable way, allowing you to catch bugs and edge cases that may not be apparent during manual testing.
-
-Your program should:
-
-- Read in the test file from disk.
-- Parse the test file to extract the byte code for each test.
-- Create a linked list data structure.
-- Iterate through each byte code string in the test file.
-- For each byte code string, execute the corresponding linked list operation (insert node, remove node, get value, etc.).
-- Verify that the output of the linked list operation matches the expected output.
-- Print the test results to the console. Indicate whether the tests all pass, and if not, which ones failed.
-- Exit with the number of tests that failed.
-
-📝 Note: The tests file includes 10 example tests, but your program will be tested against more that are not included in the assignment.
-
-### Additional Tests
-
-Write 20 additional tests, and include them in the `tests` file with the others. As with the included tests, your tests should have a description, an explanation of what it does, and the test itself on its own line. 
-
-🤔 Hint: Feel free to use AI for this. Be sure to include the prompt you used and the information it returned.
-
-## Code Demo and Explanation
-
-This is the oral portion of the homework. You will record an explanation for your data structure which demonstrates its usage and implementation. You don't have to show your face but you do have to record your voice (accommodations are available upon request). You should be sure to cover the following points in your discussion:
-
-- **Purpose and functionality of the program:** Explain what the program does and how it works.
-
-- **Input and output:** Discuss the format of the test file and the expected output for each test. Explain how the program reads in the test file and generates the output.
-
-- **Data structures:** Explain how the linked list data structure is implemented and how it is modified by the byte code commands.
-
-- **Parsing:** Discuss how the program parses the byte code commands and extracts the necessary parameters.
-
-- **Interpreting:** Explain how the program interprets the byte code commands and executes the corresponding linked list operations.
-
-- **Testing:** Discuss the importance of testing and how the byte code format allows for easy and repeatable testing of the linked list data structure.
-
-If you didn't finish the homework in is entirety, explain how you attempted to solve it and where you got stuck. This will get you at least some points. 
-
-You can use Zoom to do this, [here is a link](https://support.zoom.us/hc/en-us/articles/360059781332-Getting-started-with-recording) to some instructions. You don't have to record your face, only your voice and the screen. Go through the answer and explain how you arrived there. Your goal with this question is to convince me you know what you are talking about, so I want you to do this without reading a script or written answer. Just go through line by line and explain what the program does. When you are done, upload your recording to your Lehigh Drive and add a link below. 
-
-**💥IMPORTANT: Make sure you give blanket permission to the link holder to view the file**
-
-Paste Recording Link(s) Here:
-
-## Assignment Evaluation
-
-Deliverables:
-
-- Source code for a linked list implemention written in C, and a build script that compiles the code to static and dynamic libararies.
-
-- An interpreter that evaluates the provided test file
-
-- 20 additional tests
-
-- A [.gitlab-ci.yml](https://docs.gitlab.com/ci/) script that runs your code against the provided tests.
-
-- A recorded explanation of your project
-
-Some things to keep in mind:
-
-- Only files under vesion control in your forked assignment repository will be graded. Local files left untracked on your computer will not be considered.
-
-- Only code committed *and pushed* prior to the time of grading will be accepted. Locally committed but unpushed code will not be considered.
-
-- Your assignment will be graded according to the [Programming Assignment Grading Rubric](https://drive.google.com/open?id=1V0nBt3Rz6uFMZ9mIaFioLF-48DFX0VdkbgRUDM_eIFk).
-
-## Tips For Success 
-
-Some things to take into consideration when writing your assignment:
-
-- Start this project the day it's assigned. Use all the time allocated and don't create a situation where you are starting the project right before it is due.
-
-- At the very least, make sure your code compiles (on the Sunlab machines) before you submit it.
-
-- Use meaningful function and variable names. This will make the code easier to read and understand, and will also make it easier to maintain in the future.
-
-- Adding comments to the code can help the graders understand what your code is doing, which can help them assign partial points to incorrect solutions.
-
-- Always check for errors when reading input, opening files, or allocating memory. This will help prevent crashes and other unexpected behavior.
-
-- Free resources like file handles, socket handles, heap memory, etc. as soon as they are not needed anymore to avoid resource leaks.
-
-- Using the right data type can make your program more efficient and less error-prone. For example, use integers when working with whole numbers, and use floating-point numbers when working with decimal numbers. With systems software especially, we want to pay attention to this component of sofware design.
-
-- Test your code: Before releasing your code, make sure to test it thoroughly. Try to anticipate how users will use your program and test it under different conditions to make sure it works as expected.
+## Steps
+1. Data structures are implemented through Hashset implementation with the control std::unordered_set
+2. Load Factors with thresholds 20%, 70%, 120%
+3. The main operations used insert, contains, remove
+4. Element of 1K, 10K, 100K, 1M
+5. There are experiments run with overal total of 72.
+All the results were stored in a CSV file (performance_results.csv) with columns: DataStructure, LoadFactor, Operation, Elements, and TimeMS.
+
+## Charts
+Two charts were created using Python with a knowledge of engineering 10 concepts. The charts included the following:
+1. Operation Performance vs. Element Count (Line Chart):
+X-axis: Number of elements (log scale).
+Y-axis: Average execution time (ms).
+Lines represent operations (Insert, Contains, Remove) for both data structures.
+2. Load Factor Impact on Performance (Bar Chart):
+X-axis: Load factor thresholds (20%, 70%, 120%).
+Y-axis: Execution time (ms).
+Bars represent operations grouped by data structure.
+
+## Findings
+1. Insert:
+The custom HashSet performs well for small element counts but becomes slower than std::unordered_set as N increases.
+Frequent rehashing in the custom implementation significantly impacts performance at low load factors (20%).
+2. Contains:
+Both data structures exhibit linear growth (O(N)) in lookup time as N increases.
+The standard library's optimized hashing reduces collisions resulting in slightly faster lookups.
+3. Remove:
+Similar trends to insertion; however, deletion in the custom implementation incurs additional overhead due to manual pointer updates.
+
+At low load factors (20%), rehashing in the custom HashSet results in significant performance degradation for all operations.
+The default load factor threshold (70%) provides balanced performance across all operations.
+At high load factors (120%), retrieval times increase due to larger bucket sizes and more collisions.
+
+## Conclusion
+This benchmarking tool allows for hash set implementation and the unordered set. Through frequent rehashing, the performance isn't allocated the best when doen manually. Although, when having std::unordered_set leverages good algorithms and memory management.
+The findings highlights the importance of hash functions, load factors, and memory allocation to examine the hash set performance. 
+
+## Files Implemented
+src/lib.cpp: Source code for custom HashSet implementation.
+tests/benchmarker.cpp: Benchmarking code that generates CSV results.
+plot_charts.py: Python script for generating visualizations.
+performance_results.csv: Benchmark results in CSV format.
+Charts:
+operation_performance.png: Line chart showing operation performance vs element count.
+load_factor_impact.png: Bar chart showing load factor impact on performance.
+
+## Sources
+https://stackoverflow.com/questions/131803/unsigned-int-vs-size-t
+https://stackoverflow.com/questions/25275516/should-you-pass-member-variables-within-member-functions (used size_t bucket_count; size_t element_count; unsigned int load_threshold; unsigned int load_factor; void rehash(size_t new_size);)
+
+https://www.w3schools.com/cpp/cpp_structs.asp
+https://www.reddit.com/r/cs50/comments/ggvgvm/pset5_djb2_hash_function/ (used for unsigned long prehash)
+
+https://stackoverflow.com/questions/44097902/shared-libraries-c-makefile
+https://www.cs.colby.edu/maxwell/courses/tutorials/maketutor/
+https://gist.github.com/fbartolic/6b3c6ea3c84647b795f24a245e7959f5
+https://www.softwaretestinghelp.com/cpp-makefile-tutorial/ (used for MakeFile)
+
+https://www.geeksforgeeks.org/c-program-hashing-chaining/
+https://www.geeksforgeeks.org/implementation-of-hash-table-in-c-using-separate-chaining/
+(insert () )
+
+https://medium.com/%40omerhalidcinar/building-your-own-hashmap-in-c-open-addressing-separate-chaining-implementations-ead22ca955c2 (remove () )
+
+https://www.geeksforgeeks.org/setsize-c-stl/ (count() )
+
+https://www.geeksforgeeks.org/load-factor-and-rehashing/ (load () )
+
+https://www.geeksforgeeks.org/load-factor-and-rehashing/?utm_source=chatgpt.com updateLoadFactor()
+
+https://stackoverflow.com/questions/20039265/clearing-a-hash-table-in-c clear()
+
+Homework 2: main.c format is used for main.cpp
+https://embeddedartistry.com/blog/2017/04/24/thoughts-on-header-file-extensions-h-vs-hpp/ (understanding .hpp and .h)
+https://github.com/bbondy/hashset-cpp
+https://www.tutorialspoint.com/how-to-process-strings-using-std-istringstream (iss)
+
+Added 20 additional test cases using ChatGPT
+
+
+
+
+
+
+
+Benchmarker.cpp sources:
+<iostream> https://en.cppreference.com/w/cpp/header/iostream
+<unordered_set>https://en.cppreference.com/w/cpp/container/unordered_set
+<vector>https://en.cppreference.com/w/cpp/container/vector
+<chrono>https://en.cppreference.com/w/cpp/header/chrono
+<fstream>https://en.cppreference.com/w/cpp/header/fstream
+<iomanip> https://en.cppreference.com/w/cpp/header/iomanip
+<sys/resource.h> https://man7.org/linux/man-pages/man2/getrusage.2.html
+
+Python File:
+https://datacarpentry.github.io/python-ecology-lesson/02-starting-with-data.html
+https://plotly.com/python/plot-data-from-csv/
+https://stackoverflow.com/questions/70007610/how-do-i-make-a-graph-diagram-from-a-csv-file-in-python
+Engineering 10 knowledge
+
+generateCSV():
+https://github.com/al-eax/CSVWriter
+https://products.aspose.com/cells/cpp/create/csv/
+https://cplusplus.com/forum/beginner/135603/
+Lin.cpp sources:
+https://github.com/bbondy/hashset-cpp
+https://cppbyexample.com/hash_set.html
+https://learn.microsoft.com/en-us/cpp/standard-library/hash-set-class?view=msvc-170 (hashset class)
+https://blog.devgenius.io/how-to-implement-a-hashset-data-structure-in-c-using-a-hash-table-approach-9581e51da8df (unordered_set)
+https://stackoverflow.com/questions/49101721/hash-set-implementation-using-dynamically-allocated-array-of-implementation-of-l (linkedlist)
+
+Hashset.hpp sources:
+https://grapeprogrammer.com/const_string_reference_cpp/ 
+(changed some of the function parameters to const std :: string&; which influenced lib.c when calling onto the function)
+
+Markdown File:
+https://medium.com/@saumya.ranjan/how-to-write-a-readme-md-file-markdown-file-20cb7cbcd6f
