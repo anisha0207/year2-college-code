@@ -1,0 +1,117 @@
+-- Byte Code format for Hash Set Tests
+--
+-- test-file = test* | comment* ;  
+-- test = create-hashset | insert-item | remove-item | assert-contains | assert-doesn't-contain | assert-size | assert-load | end-of-test ;  
+-- 
+-- create-hashset = "H", size ;  
+-- insert-item = "I", value ;  
+-- remove-item = "R", value ;  
+-- assert-contains = "C", value ;  
+-- assert-doesn't-contain = "D", value ;  
+-- assert-size = "S", size ;  
+-- assert-load = "L", load_factor ;  
+-- end-of-test = "X" ;  
+-- 
+-- value = "-"? digit+ ;  
+-- size = digit+ ;  
+-- load_factor = digit+ ;  
+-- comment = "--", ?anycharacter? ;
+
+-- Inserts a value of 5 into the hash set and verifies its presence, size, and load factor.
+H10I5C5S1L10X
+
+-- This bytecode string should be interpreted as follows:
+
+-- H 10 -- create a hash set with 10 buckets
+-- I 5 -- insert the value 5 into the hash set
+-- C 5 -- assert that the value 5 is present in the set
+-- S 1 -- assert that the size of the hash set is 1
+-- L 10 -- assert that the load factor is 10%
+-- X -- end of test
+
+-- Test 2 - Insert a single value in a larger set
+H20I5C5S1L5X
+
+-- Test 3 - Insert multiple values
+H10I5I10I15C5C10C15S3L30X
+
+-- Test 4 - Remove a value from the set
+H10I5R5D5S0L0X
+
+-- Test 5 - Remove one value from multiple
+H10I5I10I15R10C5C15D10S2L20X
+
+-- Test 6 - Remove a value not in the set
+H10I5R10C5D10S1L10X
+
+-- Test 7 - Insert duplicate values
+H10I5I5C5S1L10X
+
+-- Test 8 - Test negative values and edge case handling
+H7I5I-10I-999C5C-10C-999R5D5I5C5S3L43X
+
+-- Test 9 - High load factor stress test with removals
+H5I1I2I3I4I5I6I7I8I9I10R2R4R6R8R10C1C3C5C7C9D2D4D6D8D10S5L100X
+
+-- Test 10 - Sequential operations with intermediate assertions
+H15I10S1L7I20S2L13C10C20I30S3L20R20S2L13C10D20C30I20C20R10R30I40I50I60S4L27D10D30C40C50C60X
+
+-- Test 11 - Simple insert and check
+H5I3C3S1L20X
+
+-- Test 12 - Insert two values
+H10I7I14C7C14S2L20X
+
+-- Test 13 - Insert and remove same value
+H8I6R6D6S0L0X
+
+-- Test 14 - Insert, remove, then insert again
+H12I9R9I9C9S1L8X
+
+-- Test 15 - Check empty set
+H7S0L0X
+
+-- Test 16 - Insert one, remove another
+H6I8R10C8D10S1L17X
+
+-- Test 17 - Multiple inserts, one remove
+H15I2I4I6R4C2C6D4S2L13X
+
+-- Test 18 - Insert negative value
+H10I-5C-5S1L10X
+
+-- Test 19 - Insert zero
+H8I0C0S1L13X
+
+-- Test 20 - Insert, remove, check size
+H20I7I14R7S1L5X
+
+-- Test 21 - Check load factor after single insert
+H100I50S1L1X
+
+-- Test 22 - Insert same value twice
+H5I3I3C3S1L20X
+
+-- Test 23 - Remove from empty set
+H10R5S0L0X
+
+-- Test 24 - Insert multiple, remove all
+H7I1I2I3R1R2R3S0L0X
+
+-- Test 25 - Alternate insert and remove
+H12I5R5I10R10I15C15S1L8X
+
+-- Test 26 - Check non-existent in empty set
+H5D10S0L0X
+
+-- Test 27 - Insert ascending order
+H10I1I2I3I4I5S5L50X
+
+-- Test 28 - Insert descending order
+H10I5I4I3I2I1S5L50X
+
+-- Test 29 - Remove non-existent, then insert
+H8R7I7C7S1L13X
+
+-- Test 30 - High load factor
+H2I1I2I3I4S4L200X

@@ -1,850 +1,162 @@
-#include <vector>
-#include <stdio.h>
-#include<stdlib.h>
-#include "pack109.hpp"
-#include "program.hpp"
-#include "hashmap.hpp"
+#include "hashset.hpp"
 #include <iostream>
-#include <map>
 
-//Added serialized and deserialized methods for file, status, and request here-- rest kept same 
-
-using std::begin, std::end;
-#define X8  256
-#define X16 65536
-#define MASK4 0x000000FF
-#define MASK8 0x00000000000000FF
-
-vec slice(const vec& bytes, int vbegin, int vend) {
-  if (vbegin < 0 || vend >= (int)bytes.size() || vbegin > vend) {
-      throw std::out_of_range("slice: invalid indices. asked for slice(" + std::to_string(vbegin) + ", " + std::to_string(vend) + 
-          "), but vector size is " + std::to_string(bytes.size()));
-  }
-
-  auto start = bytes.begin() + vbegin;
-  auto end   = bytes.begin() + vend + 1; // inclusive
-  return vec(start, end);
+// Constructor
+// Initializes the hash set with the given number of buckets.
+// Sets default values for element count, load threshold, and load factor.
+// Allocates an array of pointers to Node, initialized to nullptr.
+HashSet::HashSet(size_t initial_size)
+    : bucket_count(initial_size), element_count(0), load_threshold(70), load_factor(0) {
+    array = new Node*[bucket_count]();
 }
 
-// ----------------------------------------
-// PACK109_TRUE and PACK109_FALSE
-// ----------------------------------------
-
-// We only need one serialize function for bool types, as we will test on the 
-// value within the function, and push a tag depending on the value found.
-void xor_crypt(vec& data, unsigned char key) {
-    for (auto& byte : data) byte ^= key;
+// Destructor
+// Frees all memory by clearing the hash set and deleting the array.
+HashSet::~HashSet() {
+    clear();
+    delete[] array;
 }
 
-vec pack109::serialize(bool item) {
-  vec bytes;
-  if (item == true) {
-    bytes.push_back(PACK109_TRUE);
-  } else {
-    bytes.push_back(PACK109_FALSE);
-  }
-  return bytes;
+// Prehash
+// Uses djb2 hash algorithm to convert a string into a hash value.
+// Returns the raw hash value (not yet reduced to a bucket index).
+unsigned long HashSet::prehash(const std::string& item) const {
+    unsigned long hash = 5381;
+    for (char c : item) {
+        hash = ((hash << 5) + hash) + c; // hash * 33 + c
+    }
+    return hash;
 }
 
-bool pack109::deserialize_bool(vec bytes) {
-  // If there are fewer than 1 bytes, we can't deserialize this vector. The 
-  // bool message
-  if (bytes.size() < 1) {
-     throw;
-  }
+// Hash
+// Converts the prehash value into a valid bucket index by using modulo.
+unsigned long HashSet::hash(unsigned long prehash) const {
+    return prehash % bucket_count;
+}
 
-  // Here's why we make the previous check: because we are indexing into the
-  // vector with a static value. If the vector doesn't contain at least
-  // one element, the program could segfault.
-  if (bytes[0] == PACK109_TRUE) {
+// Insert
+// Adds a new string to the hash set if it doesn't already exist.
+// Handles collisions by inserting at the head of the linked list in the bucket.
+// Rehashes the table if the load factor exceeds the threshold.
+bool HashSet::insert(const std::string& item) {
+    if (contains(item)) return false;
+
+    unsigned long index = hash(prehash(item));
+    Node* new_node = new Node(item);
+    new_node->next = array[index];
+    array[index] = new_node;
+    element_count++;
+
+    updateLoadFactor();
+    if (load_factor > load_threshold) {
+        rehash(bucket_count * 2);
+    }
+
     return true;
-  } else if (bytes[0] == PACK109_FALSE) {
+}
+
+// Remove
+// Deletes an item from the hash set if it exists.
+// Traverses the linked list at the bucket to find and remove the node.
+bool HashSet::remove(const std::string& item) {
+    unsigned long index = hash(prehash(item));
+    Node* current = array[index];
+    Node* prev = nullptr;
+
+    while (current) {
+        if (current->data == item) {
+            if (prev) {
+                prev->next = current->next;
+            } else {
+                array[index] = current->next;
+            }
+            delete current;
+            element_count--;
+            updateLoadFactor();
+            return true;
+        }
+        prev = current;
+        current = current->next;
+    }
     return false;
-  } else {
-    // We throw if we are trying to deserialize a bool but the message is
-    // not in fact a bool.
-    throw;
-  }
-
 }
 
-// ----------------------------------------
-// PACK109_U8
-// ----------------------------------------
-
-// Serializing a u8 is simple: push the tag onto the vector, then the byte.
-vec pack109::serialize(u8 item) {
-  vec bytes;
-  bytes.push_back(PACK109_U8);
-  bytes.push_back(item);
-  return bytes;
+// Contains
+// Checks whether an item exists in the hash set.
+// Traverses the linked list in the appropriate bucket.
+bool HashSet::contains(const std::string& item) const {
+    unsigned long index = hash(prehash(item));
+    Node* current = array[index];
+    while (current) {
+        if (current->data == item) {
+            return true;
+        }
+        current = current->next;
+    }
+    return false;
 }
 
-u8 pack109::deserialize_u8(vec bytes) {
-  // To deserialize the u8, we need at least two bytes in the serialized
-  // vector: one for the tag and one for the byte.
-  if (bytes.size() < 2) {
-    throw;
-  }
-  // Check for the correct tag
-  if (bytes[0] == PACK109_U8) {
-    // Directly return the byte. We can do this because the return type of the
-    // function is the same as the contents of the vector: u8.
-    return bytes[1];
-  } else {
-    // Throw if the tag is not a u8
-    throw;
-  }
+// Count
+// Returns the number of elements currently stored in the hash set.
+size_t HashSet::count() const {
+    return element_count;
 }
 
-// ----------------------------------------
-// PACK109_U32
-// ----------------------------------------
-
-vec pack109::serialize(u32 item) {
-  vec bytes;
-  bytes.push_back(PACK109_U32);
-  u32 mask = MASK4; // This mask will zero out the first 3 bytes
-  // Look over the bytes of the integer. Integers have 4 bytes total.
-  for(int i = 3; i >= 0; i--) {
-    u32 to_shift = 8 * i; // Number of bytes to shift the item
-    u32 shifted = item >> to_shift;
-    // Mask the shifted bytes and cast as a char.
-    // e.g. if the item is 0x12345678, and we shift 2 bytes:
-    // shifted = 0x00001234
-    // After the mask we have 0x00000034
-    // After the cast we have 0x34. This value is pushed onto the vector.
-    bytes.push_back((u8)(shifted & mask));
-  }
-  return bytes;
+// Load
+// Returns the current load factor (as an integer percentage).
+unsigned int HashSet::load() const {
+    return load_factor;
 }
 
-u32 pack109::deserialize_u32(vec bytes) {
-  // The first byte is the tag, then we have 4 bytes for the payload, for a
-  // total of 5 bytes
-  if (bytes.size() < 5) {
-    throw;
-  }
-  // To deserialize the u32, we need a container for it. 
-  u32 deserialized_u32 = 0;
-  if (bytes[0] == PACK109_U32) {
-    int ix = 1;
-    for(int i = 3; i >= 0; i--) {
-      int to_shift = 8 * i;
-      // We have to make sure to cast the byte to a u32 before shifting it.
-      // If we don't, the bytes we are interested in will fall off:
-      // e.g. if the byte is 0xAB and we want to left shift 2 bytes
-      // bytes[ix] << to_shift = 0x00
-      // (u32)bytes[ix] << to_shift = 0x00AB0000
-      u32 shifted = (u32)bytes[ix] << to_shift;
-      // Or is used here to put the shifted bytes into the container we
-      // allocated outside of the for loop. e.g. if the byte vector is:
-      // [AB,CD,EF,12]
-      // Then deserialized_u32 will be:
-      // 0xAB000000
-      // 0xABCD0000
-      // 0xABCDEF00
-      // 0xABCDEF12
-      // Over the 4 iterations of the loop
-      deserialized_u32 = deserialized_u32 | shifted;
-      ix++;
-    }
-    return deserialized_u32;
-  } else {
-    throw;
-  }
+// Set load threshold
+// Allows user to modify the load factor threshold for triggering rehash.
+void HashSet::set_load_threshold(unsigned int threshold) {
+    load_threshold = threshold;
 }
 
-// ----------------------------------------
-// PACK109_U64
-// ----------------------------------------
-
-// Serializing a u64 works pretty much the same as serializing a u32. The big
-// change is how many times we go through the for loop.
-vec pack109::serialize(u64 item) {
-  vec bytes;
-  bytes.push_back(PACK109_U64);
-  u64 mask = MASK8;
-  for(int i = 7; i >= 0; i--) {
-    int to_shift = 8 * i;
-    u64 shifted = item >> to_shift;
-    bytes.push_back((u8)(shifted & mask));
-  }
-  return bytes;
+// Clear
+// Removes all elements from the hash set.
+// Deletes all linked list nodes and resets all buckets to nullptr.
+void HashSet::clear() {
+    for (size_t i = 0; i < bucket_count; ++i) {
+        Node* current = array[i];
+        while (current) {
+            Node* temp = current;
+            current = current->next;
+            delete temp;
+        }
+        array[i] = nullptr;
+    }
+    element_count = 0;
+    updateLoadFactor();
 }
 
-// Deserializing the u64 works the same as the u32. The big change here
-// is the size of the container.
-u64 pack109::deserialize_u64(vec bytes) {
-  if (bytes.size() < 9) {
-    throw;
-  }
-  u64 deserialized_u64 = 0; // This is a u64 now, so we can fit all the bytes
-  if (bytes[0] == PACK109_U64) {
-    int ix = 1;
-    for(int i = 7; i >= 0; i--) {
-      int to_shift = 8 * i;
-      u64 shifted = (u64)bytes[ix] << to_shift;
-      deserialized_u64 = deserialized_u64 | shifted;
-      ix++;
-    }
-    return deserialized_u64;
-  } else {
-    throw;
-  }
+// Update load factor
+// Recalculates the load factor based on element count and bucket count.
+void HashSet::updateLoadFactor() {
+    load_factor = static_cast<unsigned int>((element_count * 100) / bucket_count);
 }
 
-// ----------------------------------------
-// PACK109_I8
-// ----------------------------------------
+// Rehash
+// Doubles the number of buckets and re-inserts all existing elements into new buckets.
+// Frees the memory of the old bucket array and its nodes.
+void HashSet::rehash(size_t new_size) {
+    Node** old_array = array;
+    size_t old_bucket_count = bucket_count;
 
-vec pack109::serialize(i8 item) {
-  vec bytes;
-  bytes.push_back(PACK109_I8);
-  // We can cast the i8 to a u8 and push because it's just a byte
-  bytes.push_back((u8)item); 
-  return bytes;
-}
+    bucket_count = new_size;
+    array = new Node*[bucket_count]();
+    element_count = 0;
 
-i8 pack109::deserialize_i8(vec bytes) {
-  if (bytes.size() < 2) {
-    throw;
-  }
-  if (bytes[0] == PACK109_I8) {
-    // Get the byte and cast it to the correct return type
-    return (i8)bytes[1];
-  } else {
-    throw;
-  }
-}
-
-// ----------------------------------------
-// PACK109_I32
-// ----------------------------------------
-
-vec pack109::serialize(i32 item) {
-  vec bytes;
-  bytes.push_back(PACK109_I32);
-  i32 mask = MASK4; 
-  for(int i = 3; i >= 0; i--) {
-    i32 to_shift = 8 * i;
-    i32 shifted = item >> to_shift;
-    bytes.push_back((u8)(shifted & mask));
-  }
-  return bytes;
-}
-
-i32 pack109::deserialize_i32(vec bytes) {
-  if (bytes.size() < 5) {
-    throw;
-  }
-  i32 deserialized_i32 = 0;
-  if (bytes[0] == PACK109_I32) {
-    int ix = 1;
-    for(int i = 3; i >= 0; i--) {
-      int to_shift = 8 * i;
-      i32 shifted = (i32)bytes[ix] << to_shift;
-      deserialized_i32 = deserialized_i32 | shifted;
-      ix++;
+    for (size_t i = 0; i < old_bucket_count; ++i) {
+        Node* current = old_array[i];
+        while (current) {
+            insert(current->data);
+            Node* temp = current;
+            current = current->next;
+            delete temp;
+        }
     }
-    return deserialized_i32;
-  } else {
-    throw;
-  }
-}
 
-// ----------------------------------------
-// PACK109_I64
-// ----------------------------------------
-
-vec pack109::serialize(i64 item) {
-  vec bytes;
-  bytes.push_back(PACK109_I64);
-  i64 mask = MASK8;
-  for(int i = 7; i >= 0; i--) {
-    int to_shift = 8 * i;
-    i64 shifted = item >> to_shift;
-    bytes.push_back((u8)(shifted & mask));
-  }
-  return bytes;
-}
-
-i64 pack109::deserialize_i64(vec bytes) {
-  if (bytes.size() < 9) {
-    throw;
-  }
-  i64 deserialized_i64 = 0; 
-  if (bytes[0] == PACK109_I64) {
-    int ix = 1;
-    for(int i = 7; i >= 0; i--) {
-      int to_shift = 8 * i;
-      i64 shifted = (i64)bytes[ix] << to_shift;
-      deserialized_i64 = deserialized_i64 | shifted;
-      ix++;
-    }
-    return deserialized_i64;
-  } else {
-    throw;
-  }
-}
-
-// ----------------------------------------
-// PACK109_F32
-// ----------------------------------------
-
-vec pack109::serialize(f32 item) {
-  // The trick with the f32 is to get a reference to the underlying bytes,
-  // and then cast it to an unsigned int pointer. Then everything else
-  // works the same as serialize i32.
-  unsigned int* f32_pointer = (unsigned int*) (&item);
-  vec bytes;
-  bytes.push_back(PACK109_F32);
-  u32 mask = MASK4;
-  for(int i = 3; i >= 0; i--) {
-    int to_shift = 8 * i;
-    u32 shifted = *f32_pointer >> to_shift;
-    bytes.push_back((u8)(shifted & mask));
-  }
-  return bytes;
-}
-
-
-f32 pack109::deserialize_f32(vec bytes) {
-  if (bytes.size() < 5) {
-    throw;
-  }
-  // We deserialize the f32 the same way as an u32, and then cast it to
-  // an f32 on return.
-  u32 deserialized_u32 = 0;
-  if (bytes[0] == PACK109_F32) {
-    int ix = 1;
-    for(int i = 3 ; i >= 0; i--) {
-      int to_shift = 8 * i;
-      u32 shifted = (u32)bytes[ix] << to_shift;
-      deserialized_u32 = deserialized_u32 | shifted;
-      ix++;
-    }
-    f32* deserialized_f32 = (f32*) (&deserialized_u32);
-    return *deserialized_f32;
-  } else {
-    throw;
-  }
-}
-
-// ----------------------------------------
-// PACK109_F64
-// ----------------------------------------
-
-
-vec pack109::serialize(f64 item) {
-  // We use the same trick here as in f32, but instead we cast it to an u64*
-  u64* f64_pointer = (u64*)(&item);
-  vec bytes;
-  bytes.push_back(PACK109_F64);
-  u64 mask = MASK8;
-  for(int i =7; i >= 0; i--) {
-    int to_shift = 8 * i;
-    u64 shifted = *f64_pointer >> to_shift;
-    bytes.push_back((u8)(shifted & mask));
-  }
-  return bytes;
-}
-
-f64 pack109::deserialize_f64(vec bytes) {
-  if (bytes.size() < 9) {
-    throw;
-  }
-  u64 deserialized_u64 = 0;
-  if (bytes[0] == PACK109_F64) {
-    int ix = 1;
-    for(int i = 7; i >= 0; i--) {
-      int to_shift = 8 * i;
-      u64 shifted = (u64)bytes[ix] << to_shift;
-      deserialized_u64 = deserialized_u64 | shifted;
-      ix++;
-    }
-    f64* deserialized_f64 = (f64*) (&deserialized_u64);
-    return *deserialized_f64;
-  } else {
-    throw;
-  }
-}
-
-// ----------------------------------------
-// PACK109_S8 and PACK109_S16
-// ----------------------------------------
-
-// We can handle S8 and S16 in a single function by checking the length of the
-// input string. If it's fewer than 256 characters, we can output a serialized
-// S8. If it's up to 2^16, we can output a serialized S16.
-
-vec pack109::serialize(string item) {
-  vec bytes;
-  if (item.size() < 256) {
-    bytes.push_back(PACK109_S8);
-    bytes.push_back((u8)item.size());
-    // Push each byte of the string onto the vector
-    for (int i = 0; i < item.size(); i++) {
-      bytes.push_back(item[i]);
-    }
-  } else if (item.size() < 65536) {
-    bytes.push_back(PACK109_S16);
-    u32 string_length = (u32)item.size();
-    // Push the first byte of the length onto the vector
-    bytes.push_back((u8)(string_length >> 8));
-    // Push the second byte of the length onto the vector 
-    bytes.push_back((u8)(string_length));
-    // Push each byte of the string onto the vector
-    for (int i = 0; i < item.size(); i++) {
-      bytes.push_back((u8)item[i]);
-    }
-  } else {
-    throw;
-  }
-  return bytes;
-}
-
-string pack109::deserialize_string(vec bytes) {
-  if(bytes.size() < 3) {
-    throw;
-  }
-  string deserialized_string = "";
-  if(bytes[0] == PACK109_S8) {
-    // The string length is byte 1
-    int string_length = bytes[1];
-    // The string starts at byte 2
-    for(int i = 2; i < (string_length + 2); i++) {
-      deserialized_string += bytes[i];
-    }
-  }
-  else if(bytes[0]==PACK109_S16) {
-    // Reconstruct the string length from bytes 1 and 2
-    int string_length = (bytes[1]<<8) | bytes[2];
-    // The string starts at byte 3
-    for(int i = 3; i < (string_length + 3); i++) {
-      deserialized_string += bytes[i];
-    }
-  }
-  return deserialized_string;
-}
-  
-// ----------------------------------------
-// PACK109_A8 and PACK109_A16
-// ----------------------------------------
-
-// Each of the following functions will be very similar. There are two cases
-// for the serialize function: one for the x8 and one for the x16 objects.
-// In each function, we can leverage the serde functions implemented above
-// to convert items and serialized objects from one form to another.
-
-vec pack109::serialize(std::vector<u8> item) {
-  vec bytes;
-  if (item.size() < X8) {
-    bytes.push_back(PACK109_A8);
-    u8 size = (u8)item.size();
-    bytes.push_back(size);
-    for (int i = 0; i < item.size(); i++) {
-      vec temp = serialize(item[i]);
-      for (int j = 0; j < temp.size(); j++) {
-        bytes.push_back(temp[j]);
-      }
-    }
-  } else if (item.size() < X16) {
-    bytes.push_back(PACK109_A16);
-    u32 item_length = (u32)item.size();
-    bytes.push_back((u8)(item_length >> 8));
-    bytes.push_back((u8)(item_length));
-    for (int i = 0; i < item.size(); i++) {
-      vec elem = serialize(item[i]);
-      bytes.insert(end(bytes), begin(elem), end(elem));
-    }
-  } else {
-    throw;
-  }
-  return bytes;
-}
-
-vec pack109::serialize(std::vector<u64> item) {
-  vec bytes;
-  if (item.size() < X8) {
-    bytes.push_back(PACK109_A8);
-    u8 size = (u8)item.size();
-    bytes.push_back(size);
-    for (int i = 0; i < item.size(); i++) {
-      vec temp = serialize(item[i]);
-      for (int j = 0; j < temp.size(); j++) {
-        bytes.push_back(temp[j]);
-      }
-    }
-  } else if (item.size() < X16) {
-    bytes.push_back(PACK109_A16);
-    u32 item_length = (u32)item.size();
-    bytes.push_back((u8)(item_length >> 8));
-    bytes.push_back((u8)(item_length));
-    for (int i = 0; i < item.size(); i++) {
-      vec elem = serialize(item[i]);
-      bytes.insert(end(bytes), begin(elem), end(elem));
-    }
-  } else {
-    throw;
-  }
-  return bytes;
-}
-
-vec pack109::serialize(std::vector<f64> item) {
-  vec bytes;
-  if (item.size() < X8) {
-    bytes.push_back(PACK109_A8);
-    u8 size = (u8)item.size();
-    bytes.push_back(size);
-    for (int i = 0; i < item.size(); i++) {
-      vec temp = serialize(item[i]);
-      for (int j = 0; j < temp.size(); j++) {
-        bytes.push_back(temp[j]);
-      }
-    }
-  } else if (item.size() < X16) {
-    bytes.push_back(PACK109_A16);
-    u32 item_length = (u32)item.size();
-    bytes.push_back((u8)(item_length >> 8));
-    bytes.push_back((u8)(item_length));
-    for (int i = 0; i < item.size(); i++) {
-      vec elem = serialize(item[i]);
-      bytes.insert(end(bytes), begin(elem), end(elem));
-    }
-  } else {
-    throw;
-  }
-  return bytes;
-}
-
-vec pack109::serialize(std::vector<string> item) {
-  vec bytes;
-  if (item.size() < X8) {
-    bytes.push_back(PACK109_A8);
-    u8 size = (u8)item.size();
-    bytes.push_back(size);
-    for (int i = 0; i < item.size(); i++) {
-      vec temp = serialize(item[i]);
-      for (int j = 0; j < temp.size(); j++) {
-        bytes.push_back(temp[j]);
-      }
-    }
-  } else if (item.size() < X16) {
-    bytes.push_back(PACK109_A16);
-    u32 item_length = (u32)item.size();
-    bytes.push_back((u8)(item_length >> 8));
-    bytes.push_back((u8)(item_length));
-    for (int i = 0; i < item.size(); i++) {
-      vec elem = serialize(item[i]);
-      bytes.insert(end(bytes), begin(elem), end(elem));
-    }
-  } else {
-    throw;
-  }
-  return bytes;
-}
-
-std::vector<u8> pack109::deserialize_vec_u8(vec bytes) {
-  if(bytes.size() < 3) {
-    throw;
-  }
-  int el_size = 2;
-  std::vector<u8> result;
-  if(bytes[0] == PACK109_A8) {
-    int size = el_size * bytes[1];
-    for (int i = 2; i < (size + 2); i += el_size) {
-      vec sub_vec = slice(bytes, i, i + el_size);
-      u64 element = deserialize_u8(sub_vec);
-      result.push_back(element);
-    }
-  } else if(bytes[0] == PACK109_A16) {
-    int size = el_size * (((int)bytes[1])<<8 | (int)bytes[2]);
-    for(int i = 2; i < (size + 2); i += el_size) {
-      vec sub_vec = slice(bytes, i + 1, i + el_size);
-      u64 element = deserialize_u8(sub_vec);
-      result.push_back(element);
-    }
-  }
-  return result;
-}
-
-std::vector<u64> pack109::deserialize_vec_u64(vec bytes) {
-  if(bytes.size() < 3) {
-    throw;
-  }
-  int el_size = 9;
-  std::vector<u64> result;
-  if(bytes[0] == PACK109_A8) {
-    // Each u64 element is 9 bytes long (8 bytes payload + 1 tag byte), so
-    // the total size of the payload is size byte (byte 1) multiplied by 9
-    int size = el_size * bytes[1];
-    // The payload starts at byte 2. We increment by 9 bytes every
-    // iteration
-    for (int i = 2; i < (size + 2); i += el_size) {
-      vec sub_vec = slice(bytes, i, i + el_size);
-      u64 element = deserialize_u64(sub_vec);
-      result.push_back(element);
-    }
-  } else if(bytes[0] == PACK109_A16) {
-    int size = el_size * (((int)bytes[1])<<8 | (int)bytes[2]);
-    for(int i = 2; i < (size + 2); i += el_size) {
-      vec sub_vec = slice(bytes, i + 1, i + el_size);
-      u64 element = deserialize_u64(sub_vec);
-      result.push_back(element);
-    }
-  }
-  return result;
-}
-
-std::vector<f64> pack109::deserialize_vec_f64(vec bytes) {
-  if(bytes.size() < 3) {
-    throw;
-  }
-  int el_size = 9;
-  std::vector<f64> result;
-  if(bytes[0] == PACK109_A8) {
-    int size = el_size * bytes[1];
-    for (int i = 2; i < (size + 2); i += el_size) {
-      vec sub_vec = slice(bytes, i, i + el_size - 1);
-      f64 element = deserialize_f64(sub_vec);
-      result.push_back(element);
-    }
-  } else if(bytes[0] == PACK109_A16) {
-    int size = el_size * (((int)bytes[1])<<8 | (int)bytes[2]);
-    for(int i = 2; i < (size + 2); i += el_size) {
-      vec sub_vec = slice(bytes, i + 1, i + el_size);
-      f64 element = deserialize_f64(sub_vec);
-      result.push_back(element);
-    }
-  }
-  return result;
-}
-
-vec pack109::serialize(struct Person item) {
-  vec bytes;
-  bytes.push_back(PACK109_M8);
-  bytes.push_back(0x1); // 1 k/v pair
-  // The key is "Person"
-  vec person = serialize(string("Person"));
-  bytes.insert(end(bytes), begin(person), end(person));
-  // The value is an m8
-  bytes.push_back(PACK109_M8);
-  bytes.push_back(0x3); // 3 k/v pairs
-  // k/v 1 is "age"
-  vec agek = serialize(string("age"));
-  bytes.insert(end(bytes), begin(agek), end(agek));
-  vec agev = serialize(item.age);
-  bytes.insert(end(bytes), begin(agev), end(agev));
-  // k/v 2 is "height"
-  vec heightk = serialize(string("height"));
-  bytes.insert(end(bytes), begin(heightk), end(heightk));
-  vec heightv = serialize(item.height);
-  bytes.insert(end(bytes), begin(heightv), end(heightv));
-  // k/v 2 is "name"
-  vec namek = serialize(string("name"));
-  bytes.insert(end(bytes), begin(namek), end(namek));
-  vec namev = serialize(item.name);
-  bytes.insert(end(bytes), begin(namev), end(namev));
-  return bytes;
-}
-
-struct Person pack109::deserialize_person(vec bytes) {
-  if (bytes.size() < 10) {
-    throw;
-  }
-  vec person_slice = slice(bytes, 2, 9);
-  string person_string = deserialize_string(person_slice);
-  if (person_string != "Person") {
-    throw;
-  }
-  vec agev = slice(bytes, 17, 18);
-  u8 age = deserialize_u8(agev);
-  vec heightv = slice(bytes, 27, 32);
-  f32 height=deserialize_f32(heightv);
-  u8 name_len = bytes[39]; // Assumes name fewer than 256 chars. Safe assumption I think
-  vec namev = slice(bytes, 38, 38 + name_len + 1);
-  string name = deserialize_string(namev);
-  struct Person deserialized_person = {age, height, name};
-  return deserialized_person;
-}
-
-
-void pack109::printVec(vec &bytes) {
-  printf("[ ");
-  for (int i = 0; i < bytes.size(); i++) {
-    printf("%x ", bytes[i]);
-  }
-  printf("]\n");
-}
-
-// --- File ---
-vec serialize_file(const File& file) {
-    vec out;
-    // Tag for File (assuming 0x01 as the tag)
-    out.push_back(0x01);
-    
-    // filename length (1 byte), filename, data length (4 bytes), data
-    out.push_back((unsigned char)file.filename.size());
-    out.insert(out.end(), file.filename.begin(), file.filename.end());
-    
-    uint32_t datalen = file.data.size();
-    out.push_back((datalen >> 24) & 0xFF);
-    out.push_back((datalen >> 16) & 0xFF);
-    out.push_back((datalen >> 8) & 0xFF);
-    out.push_back(datalen & 0xFF);
-    
-    out.insert(out.end(), file.data.begin(), file.data.end());
-    return out;
-}
-
-File deserialize_file(const std::vector<unsigned char>& data) {
-    File file;
-    
-    // Minimum length: 1 (tag) + 1 (filename length) + 4 (data length) = 6 bytes
-    if (data.size() < 6) {
-        throw std::invalid_argument("Data is too short to deserialize a valid File message. Data size: " + std::to_string(data.size()));
-    }
-    
-    size_t pos = 0;
-    if (data[pos++] != 0x01) {
-        throw std::invalid_argument("Invalid tag for File message.");
-    }
-    
-    // Extract filename length
-    size_t filename_len = data[pos++];
-    
-    // Check if we have enough bytes for the filename
-    if (pos + filename_len > data.size()) {
-        throw std::invalid_argument("Data is too short to contain the complete filename.");
-    }
-    
-    // Extract filename
-    file.filename = std::string(data.begin() + pos, data.begin() + pos + filename_len);
-    pos += filename_len;
-    
-    // Check if we have enough bytes for the data length
-    if (pos + 4 > data.size()) {
-        throw std::invalid_argument("Data is too short to contain the data length.");
-    }
-    
-    // Extract data length
-    uint32_t data_len = (data[pos] << 24) | (data[pos+1] << 16) | (data[pos+2] << 8) | data[pos+3];
-    pos += 4;
-    
-    // Check if we have enough bytes for the data
-    if (pos + data_len > data.size()) {
-        throw std::invalid_argument("Data is too short to contain the complete file data.");
-    }
-    
-    // Extract data
-    file.data = std::vector<unsigned char>(data.begin() + pos, data.begin() + pos + data_len);
-    
-    return file;
-}
-
-// --- Request ---
-vec serialize_request(const Request& req) {
-    vec out;
-    // Tag for Request (assuming 0x02 as the tag)
-    out.push_back(0x02);
-    
-    // Just the filename as bytes with length prefix
-    out.push_back((unsigned char)req.filename.size());
-    out.insert(out.end(), req.filename.begin(), req.filename.end());
-    
-    return out;
-}
-
-Request deserialize_request(const vec& data) {
-    Request req;
-    
-    // Check if the data is too short to deserialize a valid Request message
-    // Minimum length: 1 (tag) + 1 (filename length) = 2 bytes
-    if (data.size() < 2) {
-        throw std::invalid_argument("Data is too short to deserialize a valid Request message.");
-    }
-    
-    // Check if the tag is correct (assuming 0x02 as the Request tag)
-    size_t pos = 0;
-    if (data[pos++] != 0x02) {
-        throw std::invalid_argument("Invalid tag for Request message.");
-    }
-    
-    // Extract filename length
-    size_t filename_len = data[pos++];
-    
-    // Check if we have enough bytes for the filename
-    if (pos + filename_len > data.size()) {
-        throw std::invalid_argument("Data is too short to contain the complete filename.");
-    }
-    
-    // Extract filename
-    req.filename = std::string(data.begin() + pos, data.begin() + pos + filename_len);
-    
-    return req;
-}
-
-// --- Status ---
-vec serialize_status(const Status& status) {
-    vec out;
-    // Tag for Status (assuming 0x03 as the tag)
-    out.push_back(0x03);
-    
-    // code (4 bytes)
-    out.push_back((status.code >> 24) & 0xFF);
-    out.push_back((status.code >> 16) & 0xFF);
-    out.push_back((status.code >> 8) & 0xFF);
-    out.push_back(status.code & 0xFF);
-    
-    // message length (2 bytes, big-endian)
-    uint16_t msg_len = static_cast<uint16_t>(status.message.size());
-    out.push_back((msg_len >> 8) & 0xFF);
-    out.push_back(msg_len & 0xFF);
-
-    // message
-    out.insert(out.end(), status.message.begin(), status.message.end());
-    
-    return out;
-}
-
-Status deserialize_status(const vec& data) {
-    Status status;
-    
-    // Minimum length: 1 (tag) + 4 (code) + 2 (message length) = 7 bytes
-    if (data.size() < 7) {
-        throw std::invalid_argument("Data is too short to deserialize a valid Status message.");
-    }
-    
-    // Check tag
-    size_t pos = 0;
-    if (data[pos++] != 0x03) {
-        throw std::invalid_argument("Invalid tag for Status message.");
-    }
-    
-    // Extract code
-    status.code = (data[pos] << 24) | (data[pos+1] << 16) | (data[pos+2] << 8) | data[pos+3];
-    pos += 4;
-    
-    // Extract message length (2 bytes, big-endian)
-    if (pos + 1 >= data.size()) {
-        throw std::invalid_argument("Data is too short to contain the message length.");
-    }
-    size_t msg_len = (data[pos] << 8) | data[pos+1];
-    pos += 2;
-    
-    // Check if we have enough bytes for the message
-    if (pos + msg_len > data.size()) {
-        throw std::invalid_argument("Data is too short to contain the complete message.");
-    }
-    
-    // Extract message
-    status.message = std::string(data.begin() + pos, data.begin() + pos + msg_len);
-    
-    return status;
-}
-
-
-std::string bytes_to_string(const std::vector<unsigned char>& byte_data) {
-    return std::string(byte_data.begin(), byte_data.end());
+    delete[] old_array;
 }
