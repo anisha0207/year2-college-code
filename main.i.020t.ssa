@@ -1,0 +1,23 @@
+
+;; Function main (main, funcdef_no=0, decl_uid=1961, cgraph_uid=0, symbol_order=0)
+
+main ()
+{
+  int y;
+  int x;
+  int D.1966;
+  int _7;
+
+  <bb 2> :
+  x_3 = add (1, 2);
+  y_5 = sub (3, 4);
+  x_6 = x_3 + y_5;
+  _7 = x_6;
+
+  <bb 3> :
+<L0>:
+  return _7;
+
+}
+
+

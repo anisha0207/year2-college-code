@@ -1,14 +1,11 @@
-// https://u.osu.edu/cstutorials/2018/09/28/how-to-debug-c-program-using-gdb-in-6-simple-steps/
-# include <stdio.h>
+#include <mylib.h>
 
-int main()
-{
-	int i, num, j;
-	printf("Enter the number: ");
-	scanf("%d", &num );
+// This is the main function
+int main(    ) {
 
-	for(i=1; i<num; i++)
-		j=j*i;
+  int x = add(1,2);
+  int y = sub(3,4);
+  x = x + y;
 
-	printf("The factorial of %d is %d\n",num,j);
+  return x;
 }
