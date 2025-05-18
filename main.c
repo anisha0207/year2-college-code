@@ -1,86 +1,83 @@
+#include "linkedlist.h"
+#include "testCase.h"
 #include <stdio.h>
-#include <stdlib.h> //getenv() and malloc() functions
-#include <string.h> //string manipulation like strtok() and strcmp()
-#include <unistd.h> //access function checking file permission
+#include <stdlib.h>
+#include <string.h>
 
-//compile using: gcc -o main main.c
-//program using: ./main -a
-//retrieve and split path varaible into directory (printed it out for testing)
-//construct file path and check
-//prints the matching file path based on the flag
+#define TEST 30      // Max number of test cases
+#define LENGTH 100   // Max characters per test case (including null terminator)
 
-// Function prototype-- executes and checks if file exist
-int file_exists(char* path);
-
-int main(int argc, char** argv){
-    //read path variable
-   char* path_e = getenv("PATH");//using the path variable
-   if (path_e == NULL){
-       printf("Path not found.\n");
-       return 1;
-   } 
-   //copy path variable 
-   char* path_c = strdup(path_e);//copies path, allocates memory into the path string
-   if (path_c == NULL){
-       printf("Fail\n");
-       return 1;
-   }
-   //split path varaible into directories
-    char* direct = strtok(path_c, ":");//splits path into directories using delimiter
-    while(direct != NULL){
-        // printf("Directory: %s\n", direct);//print each directory; testing purposes
-        direct = strtok(NULL, ":");//move to next directory
+// Function to read tests from a file
+// Two parameters: filename (the name of the file to read) and tests (a 2D array to store the test cases)
+int read(const char* filename, char tests[TEST][LENGTH]) {
+    FILE* file = fopen(filename, "r"); // Open the file in read mode
+    if (!file) { // Check if the file was opened successfully
+        printf("Error: Can't open %s\n", filename); // Print an error message if the file couldn't be opened
+        return -1; // Return -1 to indicate failure
     }
 
-    //handle -a flag-- checks if command-line argument is valid
-    if (argc< 2){
-        printf("%s [-a] filename \n", argv[0]);
-        return 2;//when invalid from the options
+    int count = 0; // Initialize the count of test cases read
+    char buffer[LENGTH]; // Temporary buffer to hold each line from the file
+
+    // This loop reads lines from the file until:
+    // - The maximum number of test cases (TEST) is reached
+    // - Or there are no more lines in the file
+    while (count < TEST && fgets(buffer, LENGTH, file)) {
+    // Remove newline character if it exists
+    buffer[strcspn(buffer, "\n")] = '\0';
+
+    // Skip empty lines, comments, and invalid lines
+    if (strlen(buffer) == 0 || buffer[0] == '-' || buffer[0] == '*' || !strchr("HTNDCEAQZSWX", buffer[0])) {
+        continue; // Go to the next iteration of the loop
     }
-    //check -a flag
-    int flag = 0;
-    int file = 1;
-    if (strcmp(argv[1], "-a") == 0){// check if first argument is -a
-        flag = 1;
-        file = 2;
-    }//when -a is found, set flag to 1 and look for file from argv[2]
 
-    //starts iterating through filenames within the command line 
-    for (int i = file; i < argc; i++) {
-        char* filename = argv[i];
-
-        // Create another copy of PATH for tokenization
-        char* path_c2 = strdup(path_e);
-        if (path_c2 == NULL) {
-            printf("Failed.\n");
-            return 1;
-        }
-        //tokenize copied path varaible to receive directories one at a time
-        char* current_direct = strtok(path_c2, ":");
-
-        while (current_direct != NULL) {
-            // Construct full file path
-            char filepath[1024];
-            snprintf(filepath, sizeof(filepath), "%s/%s", current_direct, filename);
-
-            // Check if the file exists and is executable
-            if (file_exists(filepath)) {
-                printf("%s\n", filepath);
-                if (!flag) {
-                    break;  // Stop searching if -a flag is not set
-                }
-            }
-            current_direct = strtok(NULL, ":");
-        }
-        free(path_c2);//prevent memory leaks for allocated memory
-    }
-    free(path_c);//prevent memory leaks for original duplicated path variable
-    return 0; 
-}
-int file_exists(char* path){
-    if (access(path, X_OK) == 0){
-        return 1;//file exists and executable
-    }
-    return 0; //file not exist or not executable
+    // Copy valid test cases
+    strncpy(tests[count], buffer, LENGTH - 1);
+    tests[count][LENGTH - 1] = '\0';
+    count++;
 }
 
+    fclose(file); // Close the file after reading all lines
+
+    // Debugging Output: Print all loaded tests
+    //printf("Loaded %d Test Cases:\n", count);
+    // for (int i = 0; i < count; i++) {
+    //     printf("Test %d: %s\n", i + 1, tests[i]);
+    // }
+
+    return count; // Return the number of test cases successfully read
+}
+
+int main() {
+    char tests[TEST][LENGTH];//declares 2D array as tests to store the test cases
+    const char* testFile = "tests"; // Hardcoded test file name for simplicity
+    // Read the tests from the file
+    int test_count = read(testFile, tests);//calls the read_tests function, passing the file name and the tests array.
+    if (test_count == -1) {
+        return 1; // Exit if the test file couldn't be read
+    }//if read_tests encountered an error (indicated by returning -1)
+
+    int fails = 0;
+
+    // Loop through each test and execute it
+    for (int i = 0; i < test_count; i++) {
+        List list;
+        initList(&list);//'&' used is important during debugging since it is the "address-of" function that returns the address of list variable
+
+        printf("\nExecuting Test %d: %s\n", i + 1, tests[i]);
+        int result = test(&list, tests[i]);
+        if (result == 0) {
+            printf("Test %d passed\n", i + 1);
+        } else {
+            printf("Test %d failed\n", i + 1);
+            fails++;
+        }
+        freeList(&list);
+    }
+
+    // Print results
+    printf("Passed: %d\n", test_count - fails);
+    printf("Failed: %d\n", fails);
+
+    return fails; // Return the number of failed tests as the program's exit code
+}
