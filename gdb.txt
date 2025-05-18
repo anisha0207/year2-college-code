@@ -1,0 +1,17 @@
+No symbol table is loaded.  Use the "file" command.
+Breakpoint 1 (main) pending.
+No symbol table is loaded.  Use the "file" command.
+Undefined command: "gcc".  Try "help".
+Breakpoint 1 at 0x4005fe: file main.c, line 6.
+Breakpoint 2 at 0x400605: file main.c, line 7.
+Starting program: /home/and327/and327-cse109/recitation-2/main 
+
+Breakpoint 1, main () at main.c:6
+Missing separate debuginfos, use: yum debuginfo-install glibc-2.28-251.el8_10.2.x86_64
+
+Breakpoint 2, main () at main.c:7
+$1 = 0
+$2 = 1
+$3 = 32767
+Continuing.
+[Inferior 1 (process 3847324) exited normally]

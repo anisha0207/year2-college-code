@@ -1,0 +1,11 @@
+main
+This program does not explicitly pass arguments like argc and argv, but it
+instead passed int i, num, j. User is prompted to entering a number using
+scanf("%d", &num); which assigns input value to num.
+Variables i adn j are decalred but not intitialized. 
+
+Program gave very large or incorrect output for factorial due to unitialized 
+variable j. There is also incorrect loop condition along with undefined 
+behavior where j is never initialized when multiplying with i. Within the
+loop, there should be i <= num along with j being initialized to 1 to make 
+this program run smoothly. 
