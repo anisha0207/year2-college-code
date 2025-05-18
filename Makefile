@@ -1,57 +1,83 @@
-# Compiler and flags
-CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Iinclude
+# === Directories ===
+INCLUDE_DIR := include
+SRC_DIR := src
+BUILD_DIR := build
+OBJ_DIR := $(BUILD_DIR)/objects
+BIN_DIR := $(BUILD_DIR)/bin
+LIB_RELEASE := $(BUILD_DIR)/lib/release
+LIB_DEBUG := $(BUILD_DIR)/lib/debug
 
-# Directories
-SRC_DIR = src
-INCLUDE_DIR = include
-BUILD_DIR = build
-BIN_DIR = bin
-TESTS_DIR = tests
+# === Compiler and Flags ===
+CXX := g++
+CXXFLAGS := -std=c++17 -Wall -I$(INCLUDE_DIR)
 
-# Source files and object files
-SOURCES = $(wildcard $(SRC_DIR)/*.cpp)
-OBJECTS = $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SOURCES))
+# === Source and Object Files ===
+SRCS := $(SRC_DIR)/lib.cpp
+OBJS := $(OBJ_DIR)/lib.o
 
-# Target executable
-TARGET = $(BIN_DIR)/HashMapApp
+# === Binaries and Libraries ===
+STATIC_LIB := $(LIB_RELEASE)/libhashset.a
+SHARED_LIB := $(LIB_RELEASE)/libhashset.so
+DEBUG_LIB := $(LIB_DEBUG)/libhashset.so
+TEST_EXE := $(BIN_DIR)/test_runner
+BENCHMARK_SRC := tests/benchmarker.cpp
+BENCH_EXE := $(BIN_DIR)/benchmarker
 
-# Default rule: build the target
-all: $(TARGET)
+.PHONY: all static shared debug clean install test benchmark
 
-# Rule to build the target executable
-$(TARGET): $(OBJECTS) | $(BIN_DIR)
-	@echo "Linking object files to create executable..."
+# === Default Build ===
+all: static shared
+
+# === Static Library ===
+static: $(STATIC_LIB)
+
+$(STATIC_LIB): $(OBJS)
+	@mkdir -p $(LIB_RELEASE)
+	ar rcs $@ $^
+
+# === Shared Library ===
+shared: $(SHARED_LIB)
+
+$(SHARED_LIB): $(OBJS)
+	@mkdir -p $(LIB_RELEASE)
+	$(CXX) -shared -o $@ $^
+
+# === Debug Version ===
+debug: CXXFLAGS += -g
+debug: $(DEBUG_LIB)
+
+$(DEBUG_LIB): $(OBJS)
+	@mkdir -p $(LIB_DEBUG)
+	$(CXX) -shared -o $@ $^
+
+# === Object File Rule ===
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+	@mkdir -p $(OBJ_DIR)
+	$(CXX) $(CXXFLAGS) -fPIC -c $< -o $@
+
+# === Test Runner ===
+test: $(TEST_EXE)
+	./$(TEST_EXE)
+
+$(TEST_EXE): $(SRC_DIR)/main.cpp $(OBJS)
+	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-# Rule to compile source files into object files
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp | $(BUILD_DIR)
-	@echo "Compiling $< into $@..."
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+# === Benchmark Runner ===
+benchmark: $(BENCH_EXE)
+	./$(BENCH_EXE)
 
-# Create build directory if it doesn't exist
-$(BUILD_DIR):
-	@echo "Creating build directory..."
-	mkdir -p $(BUILD_DIR)
+$(BENCH_EXE): $(BENCHMARK_SRC) $(SRCS)
+	@mkdir -p $(BIN_DIR)
+	$(CXX) $(CXXFLAGS) -o $@ $^
 
-# Create bin directory if it doesn't exist
-$(BIN_DIR):
-	@echo "Creating bin directory..."
-	mkdir -p $(BIN_DIR)
+# === Install Shared Library ===
+install: $(SHARED_LIB)
+	sudo cp $(SHARED_LIB) /usr/local/lib/
 
-# Clean up build artifacts
+# === Clean ===
 clean:
-	@echo "Cleaning up build artifacts..."
-	rm -rf $(BUILD_DIR) $(BIN_DIR)
+	rm -rf $(BUILD_DIR)
 
-# Run the program
-run: all
-	@echo "Running the program..."
-	./$(TARGET)
-
-# Test rule (optional, if you want to run tests)
-test: all
-	@echo "Running tests from $(TESTS_DIR)/test.txt..."
-	./$(TARGET) < $(TESTS_DIR)/test.txt
-
-.PHONY: all clean run test
+# $@ = target name (libhashset.a)
+# $^ = all prerequisites (lib.o)

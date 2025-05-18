@@ -1,162 +1,196 @@
 #include "hashset.hpp"
-#include <iostream>
+#include <iostream>  // For debugging
+#include <chrono>    // For timing measurements
 
-// Constructor
-// Initializes the hash set with the given number of buckets.
-// Sets default values for element count, load threshold, and load factor.
-// Allocates an array of pointers to Node, initialized to nullptr.
+// Constructor: Initialize an empty hash set with a given number of buckets
 HashSet::HashSet(size_t initial_size)
-    : bucket_count(initial_size), element_count(0), load_threshold(70), load_factor(0) {
+    : bucket_count(initial_size), element_count(0), load_threshold(90), load_factor(0) {  // Optimized load threshold
     array = new Node*[bucket_count]();
+    // std::cout << "HashSet initialized with " << bucket_count << " buckets.\n";  // Debugging statement
 }
 
-// Destructor
-// Frees all memory by clearing the hash set and deleting the array.
+// Destructor: Free all allocated memory
 HashSet::~HashSet() {
     clear();
     delete[] array;
+    // std::cout << "HashSet destroyed.\n";  // Debugging statement
 }
 
-// Prehash
-// Uses djb2 hash algorithm to convert a string into a hash value.
-// Returns the raw hash value (not yet reduced to a bucket index).
-unsigned long HashSet::prehash(const std::string& item) const {
-    unsigned long hash = 5381;
-    for (char c : item) {
-        hash = ((hash << 5) + hash) + c; // hash * 33 + c
-    }
-    return hash;
+// Generate a prehash for an integer item (optimized hash function)
+unsigned long HashSet::prehash(int item) const {
+    return static_cast<unsigned long>((item * 2654435761) % bucket_count);  // Knuth's multiplicative hash
 }
 
-// Hash
-// Converts the prehash value into a valid bucket index by using modulo.
+// Convert prehash value into a valid bucket index
 unsigned long HashSet::hash(unsigned long prehash) const {
     return prehash % bucket_count;
 }
 
-// Insert
-// Adds a new string to the hash set if it doesn't already exist.
-// Handles collisions by inserting at the head of the linked list in the bucket.
-// Rehashes the table if the load factor exceeds the threshold.
-bool HashSet::insert(const std::string& item) {
-    if (contains(item)) return false;
+// Insert an integer into the set. Returns true if inserted, false if already present.
+bool HashSet::insert(int item) {
+    auto start = std::chrono::high_resolution_clock::now();  // Start timing
 
-    unsigned long index = hash(prehash(item));
+    unsigned long hash_value = hash(prehash(item));  // Get bucket index
+    Node* current = array[hash_value];
+
+    while (current != nullptr) {
+        if (current->data == item) {  // Item already exists in the set
+            // std::cout << "Item " << item << " already exists.\n";  // Debugging statement
+            return false;
+        }
+        current = current->next;
+    }
+
     Node* new_node = new Node(item);
-    new_node->next = array[index];
-    array[index] = new_node;
-    element_count++;
+    new_node->next = array[hash_value];
+    array[hash_value] = new_node;
 
+    ++element_count;  // Increment element count
     updateLoadFactor();
-    if (load_factor > load_threshold) {
+
+    if (load_factor > load_threshold) {  // Rehash if necessary
         rehash(bucket_count * 2);
     }
+
+    auto end = std::chrono::high_resolution_clock::now();  // End timing
+    // std::cout << "Inserted item " << item << " in "
+    //           << std::chrono::duration<double, std::milli>(end - start).count()
+    //           << " ms.\n";  // Debugging statement
 
     return true;
 }
 
-// Remove
-// Deletes an item from the hash set if it exists.
-// Traverses the linked list at the bucket to find and remove the node.
-bool HashSet::remove(const std::string& item) {
-    unsigned long index = hash(prehash(item));
-    Node* current = array[index];
+// Remove an integer from the set. Returns true if removed, false if not found.
+bool HashSet::remove(int item) {
+    auto start = std::chrono::high_resolution_clock::now();  // Start timing
+
+    unsigned long hash_value = hash(prehash(item));  // Get bucket index
+    Node* current = array[hash_value];
     Node* prev = nullptr;
 
-    while (current) {
-        if (current->data == item) {
-            if (prev) {
-                prev->next = current->next;
+    while (current != nullptr) {
+        if (current->data == item) {  // Item found, remove it
+            if (prev == nullptr) {
+                array[hash_value] = current->next;
             } else {
-                array[index] = current->next;
+                prev->next = current->next;
             }
-            delete current;
-            element_count--;
+            delete current;  // Free memory for the removed node
+
+            --element_count;  // Decrement element count and update load factor
             updateLoadFactor();
+
+            auto end = std::chrono::high_resolution_clock::now();  // End timing
+            // std::cout << "Removed item " << item << " in "
+            //           << std::chrono::duration<double, std::milli>(end - start).count()
+            //           << " ms.\n";  // Debugging statement
+
             return true;
         }
         prev = current;
         current = current->next;
     }
-    return false;
+
+    auto end = std::chrono::high_resolution_clock::now();  // End timing
+    // std::cout << "Item " << item << " not found for removal. Took "
+    //           << std::chrono::duration<double, std::milli>(end - start).count()
+    //           << " ms.\n";  // Debugging statement
+
+    return false;  // Item not found in the set
 }
 
-// Contains
-// Checks whether an item exists in the hash set.
-// Traverses the linked list in the appropriate bucket.
-bool HashSet::contains(const std::string& item) const {
-    unsigned long index = hash(prehash(item));
-    Node* current = array[index];
-    while (current) {
-        if (current->data == item) {
+// Check if an integer exists in the set. Returns true if found, false otherwise.
+bool HashSet::contains(int item) const {
+    auto start = std::chrono::high_resolution_clock::now();  // Start timing
+
+    unsigned long hash_value = hash(prehash(item));  // Get bucket index
+    Node* current = array[hash_value];
+
+    while (current != nullptr) {
+        if (current->data == item) {  // Item found in the set
+            auto end = std::chrono::high_resolution_clock::now();  // End timing
+            // std::cout << "Item " << item << " found in "
+            //           << std::chrono::duration<double, std::milli>(end - start).count()
+            //           << " ms.\n";  // Debugging statement
+
             return true;
         }
         current = current->next;
     }
-    return false;
+
+    auto end = std::chrono::high_resolution_clock::now();  // End timing
+    // std::cout << "Item " << item << " not found. Took "
+    //           << std::chrono::duration<double, std::milli>(end - start).count()
+    //           << " ms.\n";  // Debugging statement
+
+    return false;  // Item not found in the set
 }
 
-// Count
-// Returns the number of elements currently stored in the hash set.
+// Return the number of elements currently in the hash set
 size_t HashSet::count() const {
     return element_count;
 }
 
-// Load
-// Returns the current load factor (as an integer percentage).
+// Return the current load factor as a percentage
 unsigned int HashSet::load() const {
     return load_factor;
 }
 
-// Set load threshold
-// Allows user to modify the load factor threshold for triggering rehash.
+// Set a new load factor threshold for resizing
 void HashSet::set_load_threshold(unsigned int threshold) {
     load_threshold = threshold;
 }
 
-// Clear
-// Removes all elements from the hash set.
-// Deletes all linked list nodes and resets all buckets to nullptr.
+// Remove all elements from the hash set and free allocated memory
 void HashSet::clear() {
     for (size_t i = 0; i < bucket_count; ++i) {
         Node* current = array[i];
-        while (current) {
+        while (current != nullptr) {
             Node* temp = current;
             current = current->next;
-            delete temp;
+            delete temp;  // Free memory for each node in this bucket
         }
-        array[i] = nullptr;
+        array[i] = nullptr;  // Reset bucket to nullptr after clearing it
     }
-    element_count = 0;
-    updateLoadFactor();
+
+    element_count = 0;      // Reset element count to zero after clearing all elements
+    updateLoadFactor();     // Update load factor after clearing all elements
+
+    // std::cout << "Cleared all elements from HashSet.\n";  // Debugging statement
 }
 
-// Update load factor
-// Recalculates the load factor based on element count and bucket count.
+// Update the load factor based on element count and bucket count
 void HashSet::updateLoadFactor() {
-    load_factor = static_cast<unsigned int>((element_count * 100) / bucket_count);
+    load_factor =
+        static_cast<unsigned int>((static_cast<double>(element_count) / bucket_count) * 100);
 }
 
-// Rehash
-// Doubles the number of buckets and re-inserts all existing elements into new buckets.
-// Frees the memory of the old bucket array and its nodes.
+// Resize and rehash all elements into a new array with larger size
 void HashSet::rehash(size_t new_size) {
-    Node** old_array = array;
+    Node** old_array = array;       // Save pointer to old array of buckets
     size_t old_bucket_count = bucket_count;
 
-    bucket_count = new_size;
-    array = new Node*[bucket_count]();
-    element_count = 0;
+    array = new Node*[new_size]();  // Allocate memory for new array of buckets and initialize to nullptr
+
+    bucket_count = new_size;        // Update bucket count to new size
+
+    element_count = 0;              // Reset element count (will be updated during re-insertion)
 
     for (size_t i = 0; i < old_bucket_count; ++i) {
         Node* current = old_array[i];
-        while (current) {
-            insert(current->data);
+        while (current != nullptr) {
+            insert(current->data);  // Reinsert each element into new array
+
             Node* temp = current;
             current = current->next;
-            delete temp;
+            delete temp;            // Free memory for old node after reinsertion
         }
+        old_array[i] = nullptr;
     }
 
-    delete[] old_array;
+    delete[] old_array;             // Free memory for old array of buckets after rehashing is complete
+
+    std::cout << "Rehashed from " << old_bucket_count
+              << " buckets to " << bucket_count
+              << ".\n";   // Debugging statement to track rehashing.
 }

@@ -1,130 +1,120 @@
-#include "hashset.hpp"
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <chrono> // For timing operations
+#include <iostream>  // For input/output operations
+#include <sstream>   // For std::istringstream, string stream processing
+#include <cstdio>    // For file operations (fopen, fclose, etc.)
+#include <cstdlib>   // For general purpose functions
+#include "hash_set.h"  // Custom hash set implementation
 
-/**
- * @param map The HashMap instance to test.
- * @param numItems The number of items to insert, retrieve, and remove.
- * Adjusted the code under testPerformance() to get a more accurate time in microseconds rather than 
- * milliseconds since the result is show as 0 for many
- */
-void testPerformance(HashMap& map, size_t numItems) {
-    std::cout << "Testing performance for " << numItems << " items:\n";
+//using c instead of .h above due to c++ style
 
-    // Measure time for insert
-    auto start = std::chrono::high_resolution_clock::now();
-    for (size_t i = 0; i < numItems; ++i) {
-        map.insert(i, "Value" + std::to_string(i));
+// Maximum number of test cases to process
+const int TESTS = 100;
+// Maximum length of each test case string
+const int TEST_LENGTH = 1000;
+
+// Function to run a single test case
+bool runTest(const char* testCase) {
+    std::istringstream iss(testCase); //Creates an input string stream from the test case string, allowing easy parsing of space-separated values
+    char operation;
+    int value;
+    HashSet<int>* set = nullptr; //c++11 :- null pointer, Declares a pointer to a HashSet<int> and initializes it to nullptr
+    bool testPassed = true;
+
+	//iss: std::istringstream is a class that allows you to treat a string as an input stream
+
+    // Process each operation in the test case
+    while (iss >> operation) {
+        switch (operation) {
+            case 'H': // Create hash set
+                iss >> value;
+                delete set; // Delete previous set if exists
+                set = new HashSet<int>(value, false);
+                break;
+            case 'I': // Insert item
+                iss >> value;
+                set->Add(value);
+                break;
+            case 'R': // Remove item
+                iss >> value;
+                set->Remove(value);
+                break;
+            case 'C': // Assert contains
+                iss >> value;
+                if (!set->Exists(value)) {
+                    testPassed = false;
+                }
+                break;
+            case 'D': // Assert doesn't contain
+                iss >> value;
+                if (set->Exists(value)) {
+                    testPassed = false;
+                }
+                break;
+            case 'S': // Assert size
+                iss >> value;
+                if (set->Size() != value) {
+                    testPassed = false;
+                }
+                break;
+            case 'L': // Assert load factor
+                iss >> value;
+                if (set->LoadFactor() != value) {
+                    testPassed = false;
+                }
+                break;
+            case 'X': // End of test
+                delete set;
+                set = nullptr;
+                return testPassed;
+            default:
+                std::cout << "Unknown operation: " << operation << std::endl;
+                testPassed = false;
+        }
     }
-    auto end = std::chrono::high_resolution_clock::now();
-    auto insertTime = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-    std::cout << "Insert time: " << insertTime << " µs\n";
-
-    // Measure time for get
-    start = std::chrono::high_resolution_clock::now();
-    for (size_t i = 0; i < numItems; ++i) {
-        std::string value;
-        map.get(i, value);
-    }
-    end = std::chrono::high_resolution_clock::now();
-    auto getTime = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-    std::cout << "Get time: " << getTime << " µs\n";
-
-    // Measure time for remove
-    start = std::chrono::high_resolution_clock::now();
-    for (size_t i = 0; i < numItems; ++i) {
-        map.remove(i);
-    }
-    end = std::chrono::high_resolution_clock::now();
-    auto removeTime = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-    std::cout << "Remove time: " << removeTime << " µs\n";
-
-    std::cout << "\n";
+    delete set; // Clean up if 'X' was not encountered
+    return testPassed;
 }
 
-/**
- * Main function to execute commands from a file and test HashMap performance.
- */
 int main() {
-    HashMap map; // Create a HashMap instance
-    #include <iostream>
-
-    std::cout << "Program started!" << std::endl;
-
-    // Open the test cases file
-    std::ifstream testFile("tests/test.txt");
-    
-    if (!testFile.is_open()) { // Check if the file opened successfully
-        std::cerr << "Error opening test.txt file.\n";
+    // Open the test file
+    FILE* file = std::fopen("/tests/tests", "r");
+    if (!file) {
+        std::cout << "Error opening file" << std::endl;
         return 1;
     }
 
-    // Read commands from the file and execute them
-    std::string command;
-    
-    while (std::getline(testFile, command)) { // Read each line from the file
-        std::istringstream iss(command);      // Parse the command using a string stream
-        std::string operation;
-        iss >> operation;                     // Extract the operation (e.g., Insert, Retrieve)
+    // Array to store test cases
+    char testCases[TESTS][TEST_LENGTH];
+    int testCount = 0;
 
-        if (operation == "Insert") {
-            int key;
-            std::string value;
-            iss >> key >> value;              // Read key and value from the command
-            map.insert(key, value);           // Insert into the hash map
-            std::cout << "Inserted key " << key << " with value \"" << value << "\".\n";
-        } else if (operation == "Retrieve") {
-            int key;
-            iss >> key;                       // Read key from the command
-            std::string value;
-            if (map.get(key, value)) {        // Attempt to retrieve the key
-                std::cout << "Retrieved value for key " << key << ": \"" << value << "\".\n";
-            } else {
-                std::cout << "Key " << key << " not found.\n";
-            }
-        } else if (operation == "Remove") {
-            int key;
-            iss >> key;                       // Read key from the command
-            if (map.remove(key)) {            // Attempt to remove the key
-                std::cout << "Removed key " << key << ".\n";
-            } else {
-                std::cout << "Failed to remove key " << key << ". Key not found.\n";
-            }
-        } else if (operation == "InsertMultiple") {
-            int numKeys;
-            iss >> numKeys;                   // Read number of keys to insert
-            for (int i = 0; i < numKeys; ++i) {
-                map.insert(i, "Value" + std::to_string(i)); // Insert multiple keys with sequential values
-            }
-        } else if (operation == "RetrieveMultiple") {
-            int numKeys;
-            iss >> numKeys;                   // Read number of keys to retrieve
-            for (int i = 0; i < numKeys; ++i) {
-                std::string value;
-                map.get(i, value);            // Attempt to retrieve each key silently
-            }
-        } else if (operation == "RemoveMultiple") {
-            int numKeys;
-            iss >> numKeys;                   // Read number of keys to remove
-            for (int i = 0; i < numKeys; ++i) {
-                map.remove(i);                // Remove each key silently
-            }
+    // Read test cases from file, skipping comment lines
+    while (std::fgets(testCases[testCount], TEST_LENGTH, file) && testCount < TESTS) {
+        if (testCases[testCount][0] != '-') { // Skip comment lines
+            char* newline = std::strchr(testCases[testCount], '\n');
+            if (newline) *newline = '\0';  // Remove newline character
+            testCount++;
+        }
+    }
+    std::fclose(file);
+
+    int failedTests = 0;
+
+    // Run all test cases
+    for (int i = 0; i < testCount; i++) {
+        bool testPassed = runTest(testCases[i]);
+        if (testPassed) {
+            std::cout << "Test " << i + 1 << " passed" << std::endl;
         } else {
-            std::cerr << "Unknown command: \"" << operation << "\".\n"; // Handle invalid commands
+            std::cout << "Test " << i + 1 << " failed" << std::endl;
+            failedTests++;
         }
     }
 
-    testFile.close(); // Close the file after processing all commands
+    // Print final results
+    if (failedTests == 0) {
+        std::cout << "All tests passed" << std::endl;
+    } else {
+        std::cout << failedTests << " tests failed" << std::endl;
+    }
 
-    // Performance testing with different numbers of items
-    HashMap performanceMap;                   // Create a new hash map instance for performance testing
-    
-    testPerformance(performanceMap, 100);     // Test with 100 items
-    testPerformance(performanceMap, 1000);    // Test with 1,000 items
-    testPerformance(performanceMap, 10000);   // Test with 10,000 items
-
-    return 0;
+    return failedTests;
 }

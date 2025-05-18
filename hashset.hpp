@@ -1,90 +1,36 @@
-#ifndef HASHMAP_H
-#define HASHMAP_H
+#pragma once
+#include <cstddef>  // for size_t
 
-#include <vector>
-#include <list>
-#include <string>
-#include <stdexcept>
-
-// KeyValuePair Class
-/**
- * @brief A class representing a key-value pair.
- * 
- * This class is used to store a pair consisting of an integer key and a string value.
- */
-class KeyValuePair {
+class HashSet {
 private:
-    int key;               // The key (integer)
-    std::string value;     // The value (string)
+    struct Node {
+        int data;  // CHANGED: Store integers instead of strings
+        Node* next;
+        Node(int val) : data(val), next(nullptr) {}  // CHANGED: Constructor accepts integers
+    };
+
+    Node** array;  // Array of pointers to linked lists (buckets)
+    size_t bucket_count;      // Number of buckets in the hash table
+    size_t element_count;     // Total number of elements in the set
+    unsigned int load_threshold;  // Maximum load factor before resizing occurs
+    unsigned int load_factor;     // Current load factor of the hash set
+
+    void updateLoadFactor();
+    void rehash(size_t new_size);
 
 public:
-    // Constructor: Initializes the key-value pair
-    KeyValuePair(int key, const std::string& value) : key(key), value(value) {}
+    explicit HashSet(size_t initial_size);  // Initialize an empty hash set with a given number of buckets
+    ~HashSet();                             // Destructor: Free all allocated memory
 
-    // Destructor
-    ~KeyValuePair() {}
+    unsigned long prehash(int item) const;  // CHANGED: Generate a prehash for an integer item
+    unsigned long hash(unsigned long prehash) const;  // Convert prehash value into a valid bucket index
 
-    // Getters
-    int getKey() const { 
-        return key; 
-    }
-    std::string getValue() const { 
-        return value; 
-    }
+    bool insert(int item);          // CHANGED: Insert integer into the set
+    bool remove(int item);          // CHANGED: Remove an integer from the set
+    bool contains(int item) const;  // CHANGED: Check if an integer exists in the set
 
-    // Setters
-    void setKey(int newKey) { 
-        key = newKey; 
-    }
-    void setValue(const std::string& newValue) { 
-        value = newValue; 
-    }
+    size_t count() const;           // Return the number of elements in the hash set
+    unsigned int load() const;      // Return the current load factor as a percentage
+    void set_load_threshold(unsigned int threshold);  // Set a new load factor threshold for resizing
+    void clear();                   // Remove all elements from the hash set
 };
-
-// HashMap Class
-/**
- * This class uses a bucket array to store key-value pairs and handles collisions
- * using separate chaining (linked lists).
- */
-class HashMap {
-private:
-    std::vector<std::list<KeyValuePair>> buckets; // Bucket array with linked lists
-    size_t bucketCount;                           // Number of buckets
-
-    /**
-     * @param key The integer key to hash.
-     * @return The index of the bucket corresponding to the given key.
-     */
-    size_t hashFunction(int key) const {
-        return key % bucketCount;
-    }
-
-public:
-    // Constructor: Initializes the bucket array with a default size of 10
-    HashMap(size_t bucketCount = 10) : buckets(bucketCount), bucketCount(bucketCount) {}
-
-    // Destructor
-    ~HashMap() {}
-
-    /**
-     * @param key The integer key.
-     * @param value The string value associated with the key.
-     * @return True if insertion/update was successful, false otherwise.
-     */
-    bool insert(int key, const std::string& value);
-
-    /**
-     * @param key The integer key to remove.
-     * @return True if the removal was successful, false if the key does not exist.
-     */
-    bool remove(int key);
-
-    /**
-     * @param key The integer key to search for.
-     * @param value_out A reference to store the retrieved value if found.
-     * @return True if the key exists and the value is retrieved, false otherwise.
-     */
-    bool get(int key, std::string& value_out);
-};
-
-#endif // HASHMAP_H
