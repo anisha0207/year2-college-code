@@ -1,150 +1,68 @@
-# CSE109 - Systems Software - Spring 2025
+## CSE109 - Systems Software - Spring 2025
 
-# Midterm Exam 2
+# Recitation 5 - Benchmarking a Linked List in C++**
 
-⏰ **Due by: 4/11/2025 EOD**
+**Objective:**
 
-## Ethics Contract
+The goal of this assignment is to analyze the performance of a linked list in C++ using a custom benchmarking tool. Students will compare their previously implemented singly linked list with the built-in `std::list` to measure the efficiency of various operations, such as insertion, deletion, and lookup.
 
-**FIRST**: Please read the following carefully:
+---
 
-- I am the sole author of the content within this exam unless otherwise cited.
-- I am not an uncredited author of any content in any other exam.
-- I will not dicsuss the exam until after the submission deadline.
-- All resources I used (including text books and online references, websites, language models), are cited in this exam.
-- I will not plagiarize someone else's work and turn it in as my own. If I use someone else's work in this exam, I will cite that work. Failure to cite work I used is plagiarism.
-- I understand that acts of academic dishonesty may be penalized to the full extent allowed by the [Lehigh University Code of Conduct][0], including receiving a failing grade for the course. I recognize that I am responsible for understanding the provisions of the Lehigh University Code of Conduct as they relate to this academic exercise.
+### **Benchmarking Setup**
 
-If you agree with the above, type your full name next to the pen emoji, along with the date. Your exam **will not be graded** without this assent.
+Modify your existing benchmarking code to include a comparison with `std::list`. Specifically, you need to:
 
----------------------------------------------
-🖋️Anisha Dasgupta
----------------------------------------------
+1. **Include the Built-in List**
+   - Ensure that your benchmarking file includes `#include <list>`.
+   - Declare a `std::list<int>` alongside your custom linked list.
 
-💥 **IMPORTANT:** When you are done, make your first commit with the commit message: `I, <your full name here>, agree to the ethics contract`.
+2. **Modify Insertion Benchmarking**
+   - Compare the insertion time of your custom linked list with `std::list`.
+   - Use `push_back()` for `std::list` and your own insertion method for the custom list.
 
-💥 **IMPORTANT: As you are working on your midterm, commit your progress regularly.**
+3. **Modify Lookup Benchmarking**
+   - Use `std::find(builtInList.begin(), builtInList.end(), val);` for `std::list`.
+   - Compare it with your linked list's lookup function.
 
-## Exam Prelude
+4. **Modify Deletion Benchmarking**
+   - Use `builtInList.remove(val);` for `std::list`.
+   - Compare it with your linked list's delete function.
 
-This exam will test your ability to independently:
+5. **Measure Memory Usage**
+   - Ensure that memory usage is measured before and after insertions.
+   
+6. **Update Output Results**
+   - Clearly display insertion, lookup, and deletion times for both implementations.
+   - Include memory usage statistics.
 
-- Use the basics of the C and C++ progamming language including classes and libraries
-- Implement algorithms and routines that use this data structure
-- Evaluate the performance and correctness of this data structure.
+---
 
-You're going to implement a `HashMap` data structure, which is an associative data structure that maps keys to values.
+### **Running and Analyzing Results**
+1. Compile the program:
+   ```sh
+   g++ -std=c++17 -o benchmark benchmark.cpp LinkedList.cpp
+   ```
+2. Run the benchmark multiple times with different values of `N` (e.g., `N = 10^3, 10^4, 10^5, 10^6`).
+   ```sh
+   ./benchmark
+   ```
+3. Observe and record the time taken for insertion, lookup, and deletion as `N` increases.
+   - Note how the lookup time grows as `N` increases.
+   - Compare the growth rate between the custom linked list and `std::list`.
+   - Evaluate memory usage before and after insertions.
 
-This repository is blank except for this README file. It's your job to create this program from scratch. This time however, you will not be given explicit step-by-step instructions on *how* to do this, you are expected to demonstrate your ability to do this. You are going to lay out the directory structure, create a header file, create library source files, implement your exam. 
+---
 
-You can use any resources from previous assignments to aid in your completion of this exam. Just be sure to cite any work you use from another source (even if you are the author). 
+### **Deliverables**
 
-You can use any libraries and functions you like to accomplish this. 
+- A table and assoicated chart recording benchmark results for different values of `N`, showing trends in insertion times.
 
-**There is an oral portion to this exam**. For this portion, I will ask you to record an explanation of your work along with your screen. For more info, see Part 2. You will not be able to pass this exam without doing this portion.
+---
 
-### Completeness
+### **Questions to Answer:**
 
-As a general note / tip, this exam specifies the highest expectations for your exam submission. But in general it's better to submit an exam that answers all questions partially than an exam that only answer the fisrt few quesitons fully. 
-
-You may find in the course of doing your exam, that cutting a corner or not meeting a requirement allows your life to be easier and allows you to get past something that's blocking you, you should take that shortcut. It might cost you a couple points in functionality/robustness, but you'll earn  more points in completeness.
-
-### Commit Policy
-
-The exam is divided into discrete "questions", and you must make at least one commit per question to receieve full credit for the question. You can do the questions in any order, and you can go back to questions for which you have already made a commit. The commit message for each question should be "QUESTION N" where N is the number of the question.
-
-## Part 1 - In Class
-
-**To be taken during recitation on Tuesday or Wednesday. It will be due when you leave recitation.**
-
-You will start this portion in recitation and you will have the whole time to take it. Recitation will be extended to 9:30PM to allow for enough time for those who have accomodations. If other accomodations are needed, see me. You will receive instructions on how to compelte that portion at recitation.
-
-For this portion, you will extend your Homework 3 in some way. That's all I will say for now.
-
-## Part 2 - Take Home
-
-**To be taken at home. It will be due Friday 4/11 EOD.**
-
-You will implement a hash map, a data structure that stores key-value pairs. Like a hash set, it allows for constant-time insertion, deletion, and lookup of values based on their associated keys. Internally, it uses a hash function to convert each key into an index in an array (called a bucket array), where the key-value pair is stored. If multiple keys hash to the same index, collisions are handled using techniques like linked lists or open addressing.
-
-- A hash set only stores unique values (no keys), and is used to check for the presence or absence of individual items. You've implemented this already, and the equivalent C++ data structure in the STL is `std::unordered_set`.
-
-- A hash map, on the other hand, stores (key, value) pairs and is used to associate values with keys, like a dictionary.  The equivalent C++ data structure in the STL is [`std::unordered_map`](https://en.cppreference.com/w/cpp/container/unordered_map).
-
-### Question 1 
-
-Lay out your project structure.
-**All of these are references to the homework three project structure. It's in layout.txt file.
-
-
-### Question 2
-
-Implement a class "KeyValuePair" which will hold a key and a value. Choose appropriate data types for the keys and value. Write appropriate constructors, destructors, and member functions.
-
-### Question 3
-
-Implement a class "HashMap" which will be the basis for the data structure we will create. It should have the following member functions (you'll implement them in the next questions, just lay out the class for now):
-
-- `bool insert(T key, U value);`: Inserts a key-value pair into the hash map. If the key already exists, it should update the value.
-- `bool remove(T key);`: Removes a key-value pair from the hash map. If the key does not exist, it should return `false`. If it does, it should return `true`.
-- `bool get(T key, U& value_out);`: Returns the value associated with the key. If the key does not exist, it should return false, otherwise it returns true, and a pointer to the value is returned in the `value_out` parameter.
-
-### Question 4
-
-Implement `insert()`
-
-### Question 5
-
-Implement `remove()`
-
-### Question 6
-
-Implement `get()`
-
-## Part 3 - Code Demo and Evaluation
-
-This is the oral portion of the exam. You will record an explanation for your program which demonstrates its implementation and functionality. You don't have to show your face but you do have to record your voice (accommodations are available upon request). You should be sure to cover the following points in your discussion:
-
-First, demonstrate the HashMap's core functions:
-  - Demonstrate `insert()`
-  - Demonstrate `remove()`
-  - Demonstrate `get()`
-
-Next, demonstrate the HashMap's performance. Use a timer to measure the performance of the following operations:
-  - insert/remove/get 100 items.
-  - insert/remove/get 1000 items.
-  - insert/remove/get 10000 items.
-  
-As part of your explaination, be sure to explain the following in detail:
-  - How did you implement the insert function?
-  - How did you implement the get function?
-  - Does the performance of the hash map meet your expectations? Why or why not?
-  - Make a note of your challenges and where you got stuck.
-
-If you didn't finish the exam in is entirety, explain how you attempted to solve it and where you got stuck. This will get you at least some points. 
-
-You can use Zoom to do this, [here is a link](https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0059856) to some instructions. You don't have to record your face, only your voice and the screen. Go through the answer and explain how you arrived there. Your goal with this question is to convince me you know what you are talking about, so I want you to do this without reading a script or written answer. Just go through line by line and explain what the program does. When you are done, upload your recording to your Lehigh Drive and add a link below. 
-
-**⚠️IMPORTANT: Make sure you give blanket permission to the link holder to view the file**
-
-🎥 Paste Recording Link(s) Here:
-
-## Submission
-
-Please submit your completed exam, which should include:
-
-1. Your program source code
-2. A recording link with permission to view granted to the link holder.
-3. No need to include binary / executable files.
-
-- Only files under version control in your forked assignment repository will be graded. Local files left untracked on your computer will not be considered.
-
-- Only code committed *and pushed* prior to the time of grading will be accepted. Locally committed but unpushed code will not be considered.
-
-- Your assignment will be graded according to the [Programming Assignment Grading Rubric](https://drive.google.com/open?id=1V0nBt3Rz6uFMZ9mIaFioLF-48DFX0VdkbgRUDM_eIFk).
-
-Your submission should be organized, well-commented, and easy to understand. Remember to document any assumptions you made during the implementation process, as well as any limitations of your solution. Your final exam will be graded on the correctness, completeness, and clarity of your submission.
-
-## Works Cited
-
-List all sources used during the exam here.
+1. How does the insertion time of your custom linked list compare to `std::list`? Why do you think this is the case?
+2. What trend do you observe in lookup times as `N` increases? How does this compare between your linked list and `std::list`?
+3. How does deletion performance compare between your implementation and `std::list`?
+4. What impact does increasing `N` have on memory usage? Which implementation uses more memory, and why?
+5. If you were to optimize your linked list, what changes would you consider making to improve performance?
